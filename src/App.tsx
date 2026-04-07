@@ -1,6 +1,7 @@
 ﻿import { Routes, Route, Navigate } from 'react-router-dom';
 import { Signup } from './Components/Signup';
 import { Login } from './Components/Login';
+import { GoogleSignIn } from './Components/GoogleSignIn';
 import { Dashboard } from './Components/Dashboard';
 import { Applications } from './Components/Application';
 import { JobTrackingSystem } from './Components/JobTrackingSystem';
@@ -31,10 +32,11 @@ function App() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to={user ? '/dashboard' : '/signup'} replace />}
+        element={<Navigate to={user ? '/dashboard' : '/login'} replace />}
       />
       <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <Signup />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/google-signin" element={user ? <Navigate to="/dashboard" replace /> : <GoogleSignIn />} />
 
       <Route
         element={

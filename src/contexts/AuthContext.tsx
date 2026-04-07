@@ -10,6 +10,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (email: string, name?: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -61,6 +62,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (email: string, name?: string): Promise<boolean> => {
+    try {
+      // In a real app this would be handled by Google OAuth,
+      // here we simulate signing in directly via an account chooser token flow.
+      const storedUsers = localStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      let user = users.find((u: any) => u.email === email);
+      if (!user) {
+        // Auto-register mock Google accounts
+        user = {
+          id: Date.now().toString(),
+          email,
+          name: name || email.split('@')[0],
+          password: 'google-oauth-mock'
+        };
+        users.push(user);
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      const userData = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      };
+
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return true;
+    } catch (error) {
+      console.error('Error during Google login:', error);
+      return false;
+    }
+  }, []);
+
   const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       // Mock signup - in real app, this would call an API
@@ -108,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, login, signup, logout, isLoading }),
-    [user, login, signup, logout, isLoading]
+    () => ({ user, login, loginWithGoogle, signup, logout, isLoading }),
+    [user, login, loginWithGoogle, signup, logout, isLoading]
   );
 
   return (

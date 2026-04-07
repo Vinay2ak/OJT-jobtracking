@@ -76,7 +76,7 @@ export function Signup() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="John Doe"
                 />
               </div>
@@ -95,7 +95,7 @@ export function Signup() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="you@example.com"
                 />
               </div>
@@ -114,7 +114,7 @@ export function Signup() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 text-gray-900 dark:text-gray-100 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="Enter your password"
               />
               <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
@@ -133,7 +133,7 @@ export function Signup() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 text-gray-900 dark:text-gray-100 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 px-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="Confirm your password"
               />
             </div>
