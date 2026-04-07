@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  /* Dark mode for body */
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
+@layer components {
+  .input {
+    @apply bg-white text-gray-900 border-gray-300;
+  }
+  .dark .input {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+  }
+}
