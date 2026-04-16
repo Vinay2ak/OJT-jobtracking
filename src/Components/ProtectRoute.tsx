@@ -9,7 +9,7 @@ function ProtectedRouteComponent({ children }: { children: React.ReactNode }) {
     try {
       const v = localStorage.getItem('requireAuth');
       return v === 'true';
-    } catch (e) {
+    } catch {
       return false;
     }
   })();

@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export function Signup() {
+export function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [codingLanguages, setCodingLanguages] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +30,7 @@ export function Signup() {
 
     setIsLoading(true);
 
-    const success = await signup(name, email, password);
+    const success = await register(name, email, password, codingLanguages);
     
     if (success) {
       navigate('/dashboard');
@@ -48,11 +49,11 @@ export function Signup() {
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 text-3xl">
             💼
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100">Create Account</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100">Register</h1>
           <p className="text-gray-600">Start tracking your job applications today</p>
         </div>
 
-        {/* Signup Form */}
+        {/* Register Form */}
         <div className="rounded-2xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-8 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Message */}
@@ -97,6 +98,24 @@ export function Signup() {
                   required
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            {/* Coding Languages Field */}
+            <div>
+              <label htmlFor="codingLanguages" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Coding Languages
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">💻</span>
+                <input
+                  type="text"
+                  id="codingLanguages"
+                  value={codingLanguages}
+                  onChange={(e) => setCodingLanguages(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="e.g. JavaScript, Python, C++"
                 />
               </div>
             </div>
@@ -157,13 +176,12 @@ export function Signup() {
               </span>
             </label>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
               className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 py-3 font-semibold text-white transition-all hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? 'Creating account...' : 'Create Account'}
+              {isLoading ? 'Registering...' : 'Register'}
             </button>
           </form>
 

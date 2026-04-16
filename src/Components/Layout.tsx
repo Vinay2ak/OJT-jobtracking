@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Bell } from 'lucide-react';
 import Logo from './Logo';
 
 function ThemeToggle() {
@@ -29,7 +30,6 @@ export function Layout() {
     { path: '/applications', label: 'Applications', icon: '💼' },
     { path: '/tracking', label: 'Job Tracking System', icon: '📋' },
     { path: '/interviews', label: 'Upcoming Interviews', icon: '📅' },
-    { path: '/followup', label: 'Follow Up Required', icon: '🔔' },
     { path: '/success', label: 'Success Rate', icon: '📈' },
     { path: '/analytics', label: 'Analytics', icon: '📊' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
@@ -135,15 +135,26 @@ export function Layout() {
         <header className="flex h-16 items-center justify-between border-b border-gray-200 surface px-6">
           <div className="flex items-center gap-4">
             <div style={{ color: 'var(--text-primary)' }} className="flex items-center gap-6">
-              <div className="flex items-center overflow-hidden">
-                <Logo compact={false} className="h-9 w-auto max-w-[180px]" />
-              </div>
+              <Link to="/" className="flex items-center overflow-hidden focus:outline-none outline-none target:outline-none active:outline-none rounded-lg">
+                <Logo compact={false} className="h-9 w-auto max-w-[180px] hover:opacity-90 transition-opacity cursor-pointer" />
+              </Link>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 {navItems.find(item => isActive(item.path))?.label || 'Dashboard'}
               </h2>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/notifications" 
+              className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2 right-2.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+            </Link>
             <ThemeToggle />
           </div>
         </header>

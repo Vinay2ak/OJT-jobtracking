@@ -25,8 +25,8 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
   });
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (application) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         company: application.company,
         position: application.position,

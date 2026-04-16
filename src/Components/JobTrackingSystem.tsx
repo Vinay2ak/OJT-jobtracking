@@ -1,22 +1,30 @@
 import { ClipboardList, Target, Calendar, Users, FileText, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
-import { mockApplications } from '../data/mockData';
+
+interface TrackingApplication {
+  id: string;
+  company: string;
+  position: string;
+  appliedDate: string;
+  lastUpdate: string;
+}
 
 export function JobTrackingSystem() {
-  // Calculate statistics
-  const totalApplications = mockApplications.length;
-  const activeApplications = mockApplications.filter(app => 
-    app.status === 'applied' || app.status === 'interviewing'
-  ).length;
-  const interviews = mockApplications.filter(app => app.status === 'interviewing').length;
-  const offers = mockApplications.filter(app => app.status === 'offered').length;
+  // Force all dashboard numbers to zero
+  const totalApplications = 0;
+  const activeApplications = 0;
+  const interviews = 0;
+  const offers = 0;
 
-  // Group applications by status
-  const applicationsByStatus = {
-    applied: mockApplications.filter(app => app.status === 'applied'),
-    interviewing: mockApplications.filter(app => app.status === 'interviewing'),
-    offered: mockApplications.filter(app => app.status === 'offered'),
-    accepted: mockApplications.filter(app => app.status === 'accepted'),
-    rejected: mockApplications.filter(app => app.status === 'rejected'),
+  // No applications shown in the pipeline
+  const applicationsByStatus: Record<
+    'applied' | 'interviewing' | 'offered' | 'accepted' | 'rejected',
+    TrackingApplication[]
+  > = {
+    applied: [],
+    interviewing: [],
+    offered: [],
+    accepted: [],
+    rejected: [],
   };
 
   return (

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-import { Search, Filter, Plus, Briefcase, Download } from 'lucide-react';
-import { mockApplications } from '../data/mockData';
+import { Search, Filter, Download } from 'lucide-react';
 import { ApplicationTable } from './AplicationTable';
 import { AddApplicationModal } from './AddAplication';
 import FeatureButton from './FeatureButton';
@@ -10,7 +9,7 @@ import type { JobApplication } from '../types/application';
 export function Applications() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [applications, setApplications] = useState<JobApplication[]>(mockApplications);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
   const [editingApplication, setEditingApplication] = useState<JobApplication | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -74,96 +73,34 @@ export function Applications() {
 
   return (
     <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
-      {/* Header Section */}
+      {/* Track Job Section */}
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
         color: 'white',
         padding: '40px',
         borderRadius: '12px',
-        marginBottom: '30px'
+        marginBottom: '30px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center'
       }}>
-        <h2 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>Job Applications</h2>
-        <p style={{ fontSize: '1.2rem', opacity: 0.9 }}>
-          Track and manage all your job applications in one place
+        <h2 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: 'bold' }}>Track Your Job</h2>
+        <p style={{ fontSize: '1.2rem', opacity: 0.9, marginBottom: '24px' }}>
+          Enter your email to track your job applications
         </p>
-      </div>
-
-      {/* Add Application Card */}
-      <div
-        onClick={() => setIsModalOpen(true)}
-        style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '30px',
-          borderRadius: '12px',
-          marginBottom: '30px',
-          cursor: 'pointer',
-          transition: 'transform 0.2s',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-      >
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          width: '200px',
-          height: '200px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          transform: 'translate(50px, -50px)'
-        }} />
-        <div style={{
-          position: 'absolute',
-          left: 0,
-          bottom: 0,
-          width: '150px',
-          height: '150px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          transform: 'translate(-50px, 50px)'
-        }} />
-
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <Plus style={{ width: '30px', height: '30px' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.8rem', margin: '0 0 8px 0', fontWeight: 'bold' }}>
-                Add New Application
-              </h3>
-              <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.9 }}>
-                Click here to track a new job application and keep your search organized
-              </p>
-            </div>
-          </div>
-          <div style={{ display: 'none' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'white',
-              color: '#667eea',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              fontWeight: '600'
-            }}>
-              <Briefcase style={{ width: '20px', height: '20px' }} />
-              Add Application
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '500px' }}>
+          <input 
+            type="email" 
+            placeholder="Enter your email address" 
+            className="flex-1 rounded-lg border-none px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300"
+          />
+          <button 
+            className="rounded-lg bg-gray-900 text-white px-6 py-3 font-semibold hover:bg-gray-800 transition-colors"
+          >
+            Track
+          </button>
         </div>
       </div>
 

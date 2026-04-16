@@ -1,44 +1,20 @@
 import { Calendar, Clock, MapPin, Video, User } from 'lucide-react';
 
+interface InterviewInfo {
+  id: string;
+  company: string;
+  position: string;
+  date: string;
+  time: string;
+  type: string;
+  interviewer: string;
+  location: string;
+  round: string;
+  notes: string;
+}
+
 export function UpcomingInterviews() {
-  const interviews = [
-    {
-      id: '1',
-      company: 'TechCorp',
-      position: 'Senior Frontend Developer',
-      date: '2026-02-15',
-      time: '10:00 AM',
-      type: 'Video Call',
-      interviewer: 'Sarah Johnson',
-      location: 'Zoom Meeting',
-      round: 'Second Round - Technical',
-      notes: 'Prepare for React and TypeScript questions',
-    },
-    {
-      id: '2',
-      company: 'InnovateLabs',
-      position: 'Lead Frontend Developer',
-      date: '2026-02-18',
-      time: '2:00 PM',
-      type: 'Video Call',
-      interviewer: 'David Park (CTO)',
-      location: 'Google Meet',
-      round: 'Final Round',
-      notes: 'Culture fit and leadership discussion',
-    },
-    {
-      id: '3',
-      company: 'DataStream',
-      position: 'React Developer',
-      date: '2026-02-20',
-      time: '11:30 AM',
-      type: 'Phone Call',
-      interviewer: 'Emily Rodriguez',
-      location: 'Phone Interview',
-      round: 'First Round - Screening',
-      notes: 'Review resume and project portfolio',
-    },
-  ];
+  const interviews: InterviewInfo[] = [];
 
   const getTypeIcon = (type: string) => {
     if (type === 'Video Call') return Video;
@@ -122,9 +98,7 @@ export function UpcomingInterviews() {
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">
                     Join Meeting
                   </button>
-                  <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm whitespace-nowrap">
-                    Reschedule
-                  </button>
+
                 </div>
               </div>
             </div>

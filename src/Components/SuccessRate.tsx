@@ -5,8 +5,8 @@ export function SuccessRate() {
   const metrics = [
     {
       label: 'Overall Success Rate',
-      value: '12.5%',
-      change: '+2.5%',
+      value: '0%',
+      change: '0%',
       trend: 'up',
       description: 'From application to offer',
       color: 'bg-purple-500',
@@ -14,8 +14,8 @@ export function SuccessRate() {
     },
     {
       label: 'Response Rate',
-      value: '62.5%',
-      change: '+5%',
+      value: '0%',
+      change: '0%',
       trend: 'up',
       description: 'Applications that got a response',
       color: 'bg-blue-500',
@@ -23,8 +23,8 @@ export function SuccessRate() {
     },
     {
       label: 'Interview Conversion',
-      value: '37.5%',
-      change: '+2%',
+      value: '0%',
+      change: '0%',
       trend: 'up',
       description: 'Applications to interviews',
       color: 'bg-green-500',
@@ -32,9 +32,9 @@ export function SuccessRate() {
     },
     {
       label: 'Offer Rate',
-      value: '33.3%',
-      change: '-5%',
-      trend: 'down',
+      value: '0%',
+      change: '0%',
+      trend: 'up',
       description: 'Interviews to offers',
       color: 'bg-yellow-500',
       icon: Zap,
@@ -42,24 +42,24 @@ export function SuccessRate() {
   ];
 
   const conversionFunnel = [
-    { id: 'funnel-applied', stage: 'Applied', count: 8, percentage: 100 },
-    { id: 'funnel-responded', stage: 'Responded', count: 5, percentage: 62.5 },
-    { id: 'funnel-interviewed', stage: 'Interviewed', count: 3, percentage: 37.5 },
-    { id: 'funnel-offered', stage: 'Offered', count: 1, percentage: 12.5 },
+    { id: 'funnel-applied', stage: 'Applied', count: 0, percentage: 0 },
+    { id: 'funnel-responded', stage: 'Responded', count: 0, percentage: 0 },
+    { id: 'funnel-interviewed', stage: 'Interviewed', count: 0, percentage: 0 },
+    { id: 'funnel-offered', stage: 'Offered', count: 0, percentage: 0 },
   ];
 
   const monthlyTrends = [
-    { id: 'trend-dec', month: 'Dec', successRate: 10 },
-    { id: 'trend-jan', month: 'Jan', successRate: 10 },
-    { id: 'trend-feb', month: 'Feb', successRate: 12.5 },
+    { id: 'trend-dec', month: 'Dec', successRate: 0 },
+    { id: 'trend-jan', month: 'Jan', successRate: 0 },
+    { id: 'trend-feb', month: 'Feb', successRate: 0 },
   ];
 
   const comparisonData = [
-    { id: 'comp-yours', name: 'Your Success Rate', value: 12.5 },
-    { id: 'comp-industry', name: 'Industry Average', value: 8 },
+    { id: 'comp-yours', name: 'Your Success Rate', value: 0 },
+    { id: 'comp-industry', name: 'Industry Average', value: 0 },
   ];
 
-  const COLORS = ['#8B5CF6', '#3B82F6'];
+  const COLORS = ['#10b981', '#059669'];
 
   return (
     <div className="p-6 space-y-6">
@@ -110,7 +110,7 @@ export function SuccessRate() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="count" fill="#8B5CF6" name="Applications" />
+              <Bar dataKey="count" fill="#10b981" name="Applications" />
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-4 space-y-2">
@@ -145,7 +145,7 @@ export function SuccessRate() {
                 labelLine={false}
                 label={({ name, value }) => `${name}: ${value}%`}
                 outerRadius={100}
-                fill="#8884d8"
+                fill="#10b981"
                 dataKey="value"
               >
                 {comparisonData.map((entry) => (
@@ -155,9 +155,9 @@ export function SuccessRate() {
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-sm text-green-800">
-              🎉 Great job! Your success rate is <strong>56% higher</strong> than the industry average of 8%.
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-sm text-gray-700">
+              No success rate data is available right now.
             </p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function SuccessRate() {
             <Line 
               type="monotone" 
               dataKey="successRate" 
-              stroke="#8B5CF6" 
+              stroke="#10b981" 
               strokeWidth={3}
               name="Success Rate (%)"
             />

@@ -154,8 +154,8 @@ export function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-300">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-700">
-                Sign up for free
+              <Link to="/register" className="font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-700">
+                Register for free
               </Link>
             </p>
           </div>

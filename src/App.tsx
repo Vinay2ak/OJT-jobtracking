@@ -1,12 +1,13 @@
-﻿import { Routes, Route, Navigate } from 'react-router-dom';
-import { Signup } from './Components/Signup';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Register } from './Components/Register';
 import { Login } from './Components/Login';
 import { GoogleSignIn } from './Components/GoogleSignIn';
 import { Dashboard } from './Components/Dashboard';
 import { Applications } from './Components/Application';
 import { JobTrackingSystem } from './Components/JobTrackingSystem';
 import { UpcomingInterviews } from './Components/UpcomingInterviews';
-import { FollowUpRequired } from './Components/FollowUpRequired';
+import { Notifications } from './Components/Notifications';
+
 import { SuccessRate } from './Components/SuccessRate';
 import { Analytics } from './Components/Analytics';
 import { Settings } from './Components/Setting';
@@ -34,7 +35,7 @@ function App() {
         path="/"
         element={<Navigate to={user ? '/dashboard' : '/login'} replace />}
       />
-      <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <Signup />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/google-signin" element={user ? <Navigate to="/dashboard" replace /> : <GoogleSignIn />} />
 
@@ -49,13 +50,14 @@ function App() {
         <Route path="/applications" element={<Applications />} />
         <Route path="/tracking" element={<JobTrackingSystem />} />
         <Route path="/interviews" element={<UpcomingInterviews />} />
-        <Route path="/followup" element={<FollowUpRequired />} />
+        <Route path="/notifications" element={<Notifications />} />
+
         <Route path="/success" element={<SuccessRate />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
 
-      <Route path="*" element={<Navigate to={user ? '/dashboard' : '/signup'} replace />} />
+      <Route path="*" element={<Navigate to={user ? '/dashboard' : '/register'} replace />} />
     </Routes>
   );
 }

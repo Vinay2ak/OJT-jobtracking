@@ -1,29 +1,28 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { mockApplications } from '../data/mockData';
 
 export function Analytics() {
   // Status distribution data
   const statusData = [
-    { id: 'status-applied', name: 'Applied', value: mockApplications.filter(app => app.status === 'applied').length },
-    { id: 'status-interviewing', name: 'Interviewing', value: mockApplications.filter(app => app.status === 'interviewing').length },
-    { id: 'status-offered', name: 'Offered', value: mockApplications.filter(app => app.status === 'offered').length },
-    { id: 'status-rejected', name: 'Rejected', value: mockApplications.filter(app => app.status === 'rejected').length },
+    { id: 'status-applied', name: 'Applied', value: 0 },
+    { id: 'status-interviewing', name: 'Interviewing', value: 0 },
+    { id: 'status-offered', name: 'Offered', value: 0 },
+    { id: 'status-rejected', name: 'Rejected', value: 0 },
   ];
 
   // Monthly applications data
   const monthlyData = [
-    { id: 'month-jan', month: 'Jan', applications: 2 },
-    { id: 'month-feb', month: 'Feb', applications: 6 },
+    { id: 'month-jan', month: 'Jan', applications: 0 },
+    { id: 'month-feb', month: 'Feb', applications: 0 },
   ];
 
   // Response rate data
   const responseRateData = [
-    { id: 'rate-response', name: 'Response Rate', responses: 5, total: 8 },
-    { id: 'rate-interview', name: 'Interview Rate', interviews: 3, total: 8 },
-    { id: 'rate-offer', name: 'Offer Rate', offers: 1, total: 8 },
+    { id: 'rate-response', name: 'Response Rate', responses: 0, total: 0 },
+    { id: 'rate-interview', name: 'Interview Rate', interviews: 0, total: 0 },
+    { id: 'rate-offer', name: 'Offer Rate', offers: 0, total: 0 },
   ];
 
-  const COLORS = ['#3B82F6', '#EAB308', '#10B981', '#EF4444', '#8B5CF6'];
+  const COLORS = ['#10b981', '#059669', '#34d399', '#f59e0b', '#ef4444'];
 
   return (
     <div className="space-y-6 p-6">
@@ -31,23 +30,23 @@ export function Analytics() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <div className="rounded-lg border border-gray-200 surface dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">Response Rate</p>
-          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">62.5%</p>
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400">↑ 5% from last month</p>
+          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">0%</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No change</p>
         </div>
         <div className="rounded-lg border border-gray-200 surface dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">Interview Rate</p>
-          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">37.5%</p>
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400">↑ 2% from last month</p>
+          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">0%</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No change</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">Offer Rate</p>
-          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">12.5%</p>
-          <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-500">→ Same as last month</p>
+          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">0%</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No change</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">Avg. Response Time</p>
-          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">8 days</p>
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400">↓ 2 days from last month</p>
+          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">0 days</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No change</p>
         </div>
       </div>
 
@@ -65,7 +64,7 @@ export function Analytics() {
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={100}
-                fill="#8884d8"
+                fill="#10b981"
                 dataKey="value"
               >
                 {statusData.map((entry) => (
@@ -87,7 +86,7 @@ export function Analytics() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey="applications" stroke="#3B82F6" strokeWidth={2} />
+              <Line type="monotone" dataKey="applications" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -103,7 +102,7 @@ export function Analytics() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="responses" fill="#3B82F6" name="Count" />
+            <Bar dataKey="responses" fill="#10b981" name="Count" />
           </BarChart>
         </ResponsiveContainer>
       </div>

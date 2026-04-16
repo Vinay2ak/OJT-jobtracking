@@ -5,13 +5,14 @@ interface User {
   id: string;
   email: string;
   name: string;
+  codingLanguages?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: (email: string, name?: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, codingLanguages: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUsers = localStorage.getItem('users');
       const users = storedUsers ? JSON.parse(storedUsers) : [];
       
-      const foundUser = users.find((u: any) => u.email === email && u.password === password);
+      const foundUser = users.find((u: Record<string, string>) => u.email === email && u.password === password);
       
       if (foundUser) {
         const userData = {
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUsers = localStorage.getItem('users');
       const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-      let user = users.find((u: any) => u.email === email);
+      let user = users.find((u: Record<string, string>) => u.email === email);
       if (!user) {
         // Auto-register mock Google accounts
         user = {
@@ -97,14 +98,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
+  const register = useCallback(async (name: string, email: string, password: string, codingLanguages: string): Promise<boolean> => {
     try {
       // Mock signup - in real app, this would call an API
       const storedUsers = localStorage.getItem('users');
       const users = storedUsers ? JSON.parse(storedUsers) : [];
       
       // Check if user already exists
-      const existingUser = users.find((u: any) => u.email === email);
+      const existingUser = users.find((u: Record<string, string>) => u.email === email);
       if (existingUser) {
         return false;
       }
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name,
         email,
         password, // In real app, never store plain passwords!
+        codingLanguages,
       };
       
       users.push(newUser);
@@ -123,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
+        codingLanguages: newUser.codingLanguages,
       };
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -144,8 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, login, loginWithGoogle, signup, logout, isLoading }),
-    [user, login, loginWithGoogle, signup, logout, isLoading]
+    () => ({ user, login, loginWithGoogle, register, logout, isLoading }),
+    [user, login, loginWithGoogle, register, logout, isLoading]
   );
 
   return (
@@ -155,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

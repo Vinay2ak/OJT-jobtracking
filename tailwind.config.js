@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -6,7 +8,13 @@ export default {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        blue: colors.emerald,
+        purple: colors.emerald,
+        indigo: colors.emerald,
+      }
+    },
   },
   plugins: [],
 }
