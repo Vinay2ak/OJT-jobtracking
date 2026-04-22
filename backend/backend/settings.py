@@ -198,9 +198,14 @@ SIMPLE_JWT = {
 }
 
 
+# os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Local development
+    "http://localhost:3000",  # Alternate local port
+    "https://jobtracking-tau.vercel.app"
+]
 # CORS settings
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
-CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes')
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = [
