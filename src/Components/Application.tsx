@@ -1,71 +1,17 @@
-import { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import { useState } from 'react';
 
 import { Search, Filter, Download } from 'lucide-react';
 import { ApplicationTable } from './AplicationTable';
 import { AddApplicationModal } from './AddAplication';
 import FeatureButton from './FeatureButton';
 import type { JobApplication } from '../types/application';
-import { apiClient } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 
 export function Applications() {
-  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [applications, setApplications] = useState<JobApplication[]>([]);const [editingApplication, setEditingApplication] = useState<JobApplication | undefined>();
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [editingApplication, setEditingApplication] = useState<JobApplication | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Fetch applications on component mount
-  useEffect(() => {
-    if (user) {
-      fetchApplications();
-    }
-  }, [user]);
-
-  // WebSocket connection for real-time updates
-  useEffect(() => {
-    if (!user) return;
-
-    const backend_url = import.meta.env.VITE_API_URL || 'https://ojt-jobtracking-1906.onrender.com';
-    const socket = io(backend_url, {
-      auth: {
-        token: localStorage.getItem('token'),
-        userId: user.id,
-      },
-    });
-
-    // Listen for real-time job updates
-    socket.on('job_update', (data: JobApplication) => {
-      console.log('Real-time update:', data);
-      // Add new job to the top of the list
-      setApplications((prev) => [data, ...prev.filter(app => app.id !== data.id)]);
-    });
-
-    // Listen for job deletions
-    socket.on('job_deleted', (jobId: string) => {
-      console.log('Job deleted:', jobId);
-      setApplications((prev) => prev.filter(app => app.id !== jobId));
-    });
-
-    // Handle connection errors
-    socket.on('error', (error: any) => {
-      console.error('WebSocket error:', error);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      socket.disconnect();
-    };
-  }, [user]);
-
-  const fetchApplications = async () => {
-    try {
-      const data = await apiClient.getApplications(user!.id);
-      setApplications(data);
-    } catch (error) {
-      console.error('Failed to fetch applications:', error);    }
-  };
 
   const filteredApplications = applications.filter(app => {
     const matchesSearch =
@@ -78,53 +24,22 @@ export function Applications() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddApplication = async (newApp: JobApplication) => {
-    try {
-      await apiClient.createApplication({
-        ...newApp,
-        userId: user!.id,
-      });
-      await fetchApplications(); // Refresh data from server
-    } catch (error) {
-      console.error('Failed to add application:', error);
-      // You might want to show an error toast here
-    }
+  const handleAddApplication = (newApp: JobApplication) => {
+    setApplications([newApp, ...applications]);
   };
 
-  const handleEditApplication = async (updatedApp: JobApplication) => {
-    try {
-      await apiClient.updateApplication(updatedApp.id, updatedApp);
-      await fetchApplications(); // Refresh data from server
-    } catch (error) {
-      console.error('Failed to update application:', error);
-      // You might want to show an error toast here
-    }
+  const handleEditApplication = (updatedApp: JobApplication) => {
+    setApplications(applications.map(app =>
+      app.id === updatedApp.id ? updatedApp : app
+    ));
   };
 
-  const handleDeleteApplication = async (id: string) => {
-    try {
-      await apiClient.deleteApplication(id);
-      await fetchApplications(); // Refresh data from server
-    } catch (error) {
-      console.error('Failed to delete application:', error);
-      // You might want to show an error toast here
-    }
+  const handleDeleteApplication = (id: string) => {
+    setApplications(applications.filter(app => app.id !== id));
   };
 
-  const toggleFollowUp = async (id: string) => {
-    try {
-      const app = applications.find(a => a.id === id);
-      if (app) {
-        await apiClient.updateApplication(id, {
-          ...app,
-          followUp: !app.followUp,
-        });
-        await fetchApplications(); // Refresh data from server
-      }
-    } catch (error) {
-      console.error('Failed to toggle follow-up:', error);
-      // You might want to show an error toast here
-    }
+  const toggleFollowUp = (id: string) => {
+    setApplications(applications.map(app => app.id === id ? { ...app, followUp: !app.followUp } : app));
   };
 
   const exportCSV = (items: JobApplication[]) => {
@@ -319,6 +234,3 @@ export function Applications() {
     </div>
   );
 }
-
-
-

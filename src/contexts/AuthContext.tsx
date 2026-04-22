@@ -1,6 +1,5 @@
-﻿import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
-import type { ReactNode } from "react";
-import { apiClient } from "../services/api";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import type { ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -27,12 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check if user is logged in on mount
     try {
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem('user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Error loading user from localStorage:", error);
+      console.error('Error loading user from localStorage:', error);
     } finally {
       setIsLoading(false);
     }
@@ -40,18 +39,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await apiClient.login(email, password);
-      const userData = {
-        id: response.user.id,
-        email: response.user.email,
-        name: response.user.name,
-      };
-      setUser(userData);
-      localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.setItem("token", response.token);
-      return true;
+      // Mock login - in real app, this would call an API
+      const storedUsers = localStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+      
+      const foundUser = users.find((u: Record<string, string>) => u.email === email && u.password === password);
+      
+      if (foundUser) {
+        const userData = {
+          id: foundUser.id,
+          email: foundUser.email,
+          name: foundUser.name,
+        };
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        return true;
+      }
+      
+      return false;
     } catch (error) {
-      console.error("Login error:", error);
+      console.error('Error during login:', error);
       return false;
     }
   }, []);
@@ -60,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // In a real app this would be handled by Google OAuth,
       // here we simulate signing in directly via an account chooser token flow.
-      const storedUsers = localStorage.getItem("users");
+      const storedUsers = localStorage.getItem('users');
       const users = storedUsers ? JSON.parse(storedUsers) : [];
 
       let user = users.find((u: Record<string, string>) => u.email === email);
@@ -69,11 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user = {
           id: Date.now().toString(),
           email,
-          name: name || email.split("@")[0],
-          password: "google-oauth-mock"
+          name: name || email.split('@')[0],
+          password: 'google-oauth-mock'
         };
         users.push(user);
-        localStorage.setItem("users", JSON.stringify(users));
+        localStorage.setItem('users', JSON.stringify(users));
       }
 
       const userData = {
@@ -83,46 +90,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       setUser(userData);
-      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(userData));
       return true;
     } catch (error) {
-      console.error("Error during Google login:", error);
+      console.error('Error during Google login:', error);
       return false;
     }
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, codingLanguages: string): Promise<boolean> => {
     try {
-      const response = await apiClient.register(name, email, password, codingLanguages);
+      // Mock signup - in real app, this would call an API
+      const storedUsers = localStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+      
+      // Check if user already exists
+      const existingUser = users.find((u: Record<string, string>) => u.email === email);
+      if (existingUser) {
+        return false;
+      }
+      
+      const newUser = {
+        id: Date.now().toString(),
+        name,
+        email,
+        password, // In real app, never store plain passwords!
+        codingLanguages,
+      };
+      
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      
       const userData = {
-        id: response.user.id,
-        email: response.user.email,
-        name: response.user.name,
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        codingLanguages: newUser.codingLanguages,
       };
       setUser(userData);
-      localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.setItem("token", response.token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
       return true;
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error('Error during signup:', error);
       return false;
     }
   }, []);
 
   const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    try {
+      setUser(null);
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   }, []);
 
-  const value = useMemo(() => ({
-    user,
-    login,
-    loginWithGoogle,
-    register,
-    logout,
-    isLoading,
-  }), [user, login, loginWithGoogle, register, logout, isLoading]);
+  const value = useMemo(
+    () => ({ user, login, loginWithGoogle, register, logout, isLoading }),
+    [user, login, loginWithGoogle, register, logout, isLoading]
+  );
 
   return (
     <AuthContext.Provider value={value}>
@@ -131,10 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
