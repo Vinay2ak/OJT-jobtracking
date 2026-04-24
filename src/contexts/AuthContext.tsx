@@ -48,9 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const userData = {
-        id: data.user?.id || data.id,
-        email: data.user?.email || data.email,
-        name: data.user?.name || data.name,
+        id: String(data.user?.id || data.id || ''),
+        email: data.user?.email || data.email || '',
+        name: data.user?.name || data.user?.username || data.name || data.username || '',
+        codingLanguages: data.user?.codingLanguages || data.codingLanguages || '',
       };
       
       setUser(userData);
@@ -61,19 +62,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (token: string): Promise<void> => {
+  const loginWithGoogle = useCallback(async (googleToken: string): Promise<void> => {
     try {
-      const data = await apiClient.loginWithGoogle(token);
+      const data = await apiClient.loginWithGoogle(googleToken);
       
-      const token = data.token || data.access;
-      if (token) {
-        localStorage.setItem('token', token);
+      const authToken = data.token || data.access;
+      if (authToken) {
+        localStorage.setItem('token', authToken);
       }
       
       const userData = {
-        id: data.user?.id || data.id,
-        email: data.user?.email || data.email,
-        name: data.user?.name || data.name,
+        id: String(data.user?.id || data.id || ''),
+        email: data.user?.email || data.email || '',
+        name: data.user?.name || data.user?.username || data.name || data.username || '',
+        codingLanguages: data.user?.codingLanguages || data.codingLanguages || '',
       };
 
       setUser(userData);
@@ -94,9 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const userData = {
-        id: data.user?.id || data.id,
-        email: data.user?.email || data.email,
-        name: data.user?.name || data.name,
+        id: String(data.user?.id || data.id || ''),
+        email: data.user?.email || data.email || '',
+        name: data.user?.name || data.user?.username || data.name || data.username || '',
+        codingLanguages: data.user?.codingLanguages || data.codingLanguages || '',
       };
       
       setUser(userData);
