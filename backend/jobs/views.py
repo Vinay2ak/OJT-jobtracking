@@ -6,6 +6,9 @@ from rest_framework import status
 from .models import Job
 from .serializers import JobSerializer, JobStatusUpdateSerializer, ExtensionJobSerializer, JobSyncItemSerializer
 from .utils import notify_user
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class JobView(APIView):
@@ -123,6 +126,17 @@ class DashboardView(APIView):
         viewed = jobs.filter(status='viewed').count()
         withdrawn = jobs.filter(status='withdrawn').count()
 
+        # Platform breakdown
+        platform_stats = {}
+        for platform_choice in ['linkedin', 'naukri', 'indeed', 'manual', 'unknown']:
+            count = jobs.filter(platform=platform_choice).count()
+            if count > 0:
+                platform_stats[platform_choice] = count
+
+        # Source breakdown
+        extension_count = jobs.filter(source='extension').count()
+        manual_count = jobs.filter(source='manual').count()
+
         # Recent jobs (last 10)
         recent_jobs = jobs[:10]
         serializer = JobSerializer(recent_jobs, many=True)
@@ -136,6 +150,11 @@ class DashboardView(APIView):
                 "rejected": rejected,
                 "viewed": viewed,
                 "withdrawn": withdrawn,
+            },
+            "platform_stats": platform_stats,
+            "source_stats": {
+                "extension": extension_count,
+                "manual": manual_count,
             },
             "recent_jobs": serializer.data,
             "all_jobs": JobSerializer(jobs, many=True).data,
@@ -152,7 +171,7 @@ class ExtensionJobView(APIView):
 
         data = serializer.validated_data
 
-        # Prevent duplicate tracking (same company + role within the last 5 minutes)
+        # Prevent duplicate tracking (same company + role for the same user)
         from django.utils import timezone
         from datetime import timedelta
         five_min_ago = timezone.now() - timedelta(minutes=5)
@@ -194,6 +213,7 @@ class ExtensionJobView(APIView):
             "job": job_data
         }, status=status.HTTP_201_CREATED)
 
+
 class ExtensionSyncJobsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -209,11 +229,21 @@ class ExtensionSyncJobsView(APIView):
             serializer = JobSyncItemSerializer(data=data)
             if serializer.is_valid():
                 validated = serializer.validated_data
+
+                # More precise matching: exact company + role contains match
                 job = Job.objects.filter(
                     user=request.user,
-                    company__icontains=validated['company'],
-                    role__icontains=validated['role'][:10]
+                    company__iexact=validated['company'],
+                    role__icontains=validated['role'][:30]  # Use first 30 chars, not 10
                 ).order_by('-applied_date').first()
+
+                # Fallback: try looser match if exact didn't work
+                if not job:
+                    job = Job.objects.filter(
+                        user=request.user,
+                        company__icontains=validated['company'],
+                        role__icontains=validated['role'][:15]
+                    ).order_by('-applied_date').first()
 
                 if job and job.status != validated['status']:
                     job.status = validated['status']
@@ -233,6 +263,7 @@ class ExtensionSyncJobsView(APIView):
             "updated_jobs": updated_jobs
         })
 
+
 class GmailSyncView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -246,4 +277,5 @@ class GmailSyncView(APIView):
                 "updated_jobs": updated_jobs
             })
         except Exception as e:
+            logger.error(f"Gmail sync failed for user {request.user.email}: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

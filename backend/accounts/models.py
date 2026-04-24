@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-import random
+from django.utils import timezone
+from datetime import timedelta
 
 
 class User(AbstractUser):
@@ -17,5 +18,11 @@ class OTP(models.Model):
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def generate_otp(self):
-        return str(random.randint(100000, 999999))
+    OTP_EXPIRY_MINUTES = 10
+
+    def is_expired(self):
+        """Check if this OTP has expired (older than 10 minutes)."""
+        return timezone.now() > self.created_at + timedelta(minutes=self.OTP_EXPIRY_MINUTES)
+
+    def __str__(self):
+        return f"OTP for {self.email} at {self.created_at}"
