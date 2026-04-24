@@ -3,7 +3,7 @@ URL configuration for backend project.
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenObtainPairView
+from accounts.views import CustomTokenObtainPairView
 from django.http import JsonResponse
 
 def welcome(request):
@@ -17,6 +17,6 @@ urlpatterns = [
     path('', welcome, name='welcome'),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
-    path('api/token/', TokenObtainPairView.as_view()),
+    path('api/token/', CustomTokenObtainPairView.as_view()),
     path('api/jobs/', include('jobs.urls')),
 ]

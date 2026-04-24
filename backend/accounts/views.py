@@ -8,12 +8,23 @@ from .models import OTP
 import random
 import logging
 
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 logger = logging.getLogger(__name__)
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            username = request.data.get('username') or request.data.get('email')
+            logger.info(f"SUCCESSFUL LOGIN: User '{username}' has logged in.")
+        return response
+
 
 
 class SignupView(APIView):
