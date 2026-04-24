@@ -28,17 +28,15 @@ export function Register() {
       return;
     }
 
-    setIsLoading(true);
-
-    const success = await register(name, email, password, codingLanguages);
-    
-    if (success) {
+    try {
+      setIsLoading(true);
+      await register(name, email, password, codingLanguages);
       navigate('/dashboard');
-    } else {
-      setError('Registration failed: Email already exists or backend is not connected');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (

@@ -11,9 +11,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  loginWithGoogle: (token: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, codingLanguages: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string) => Promise<void>;
+  register: (name: string, email: string, password: string, codingLanguages: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -38,12 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     try {
       const data = await apiClient.login(email, password);
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const token = data.token || data.access;
+      if (token) {
+        localStorage.setItem('token', token);
       }
       
       const userData = {
@@ -54,19 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-      return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during login:', error);
-      return false;
+      throw error;
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (token: string): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (token: string): Promise<void> => {
     try {
       const data = await apiClient.loginWithGoogle(token);
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const token = data.token || data.access;
+      if (token) {
+        localStorage.setItem('token', token);
       }
       
       const userData = {
@@ -77,19 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-      return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during Google login:', error);
-      return false;
+      throw error;
     }
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string, codingLanguages: string): Promise<boolean> => {
+  const register = useCallback(async (name: string, email: string, password: string, codingLanguages: string): Promise<void> => {
     try {
       const data = await apiClient.register(name, email, password, codingLanguages);
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const token = data.token || data.access;
+      if (token) {
+        localStorage.setItem('token', token);
       }
       
       const userData = {
@@ -100,11 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-      
-      return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during signup:', error);
-      return false;
+      throw error;
     }
   }, []);
 

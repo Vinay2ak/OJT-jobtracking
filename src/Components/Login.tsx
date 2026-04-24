@@ -18,15 +18,14 @@ export function Login() {
     setError('');
     setIsLoading(true);
 
-    const success = await login(email, password);
-    
-    if (success) {
+    try {
+      await login(email, password);
       navigate('/dashboard');
-    } else {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleGoogleLogin = useGoogleLogin({
@@ -34,17 +33,13 @@ export function Login() {
       setIsLoading(true);
       setError('');
       try {
-        // Send the access token to the backend
-        const success = await loginWithGoogle(tokenResponse.access_token);
-        if (success) {
-          navigate('/dashboard');
-        } else {
-          setError('Google login failed. Please try again.');
-        }
-      } catch (err) {
-        setError('An error occurred during Google Login.');
+        await loginWithGoogle(tokenResponse.access_token);
+        navigate('/dashboard');
+      } catch (err: any) {
+        setError(err.message || 'Google login failed. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     },
     onError: () => {
       setError('Google login was cancelled or failed.');

@@ -3,13 +3,37 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-backend-domai
 export const apiClient = {
   // Auth endpoints
   async register(name: string, email: string, password: string, codingLanguages: string) {
+    // Django username cannot have spaces, so we'll use a sanitized version of name or just email
+    const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+    
     const response = await fetch(`${API_BASE_URL}/api/accounts/signup/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username: name, email, password, codingLanguages }),
+      body: JSON.stringify({ 
+        username: username, // Use a valid username string
+        name: name, 
+        email, 
+        password, 
+        codingLanguages 
+      }),
     });
-    if (!response.ok) throw new Error("Registration failed");
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // Extract the first error message from field-specific errors if needed
+      let errorMessage = errorData.error || errorData.message || errorData.detail;
+      
+      if (!errorMessage && typeof errorData === 'object') {
+        const firstKey = Object.keys(errorData)[0];
+        if (firstKey) {
+          const firstError = errorData[firstKey];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          errorMessage = `${firstKey}: ${errorMessage}`;
+        }
+      }
+      
+      throw new Error(errorMessage || "Registration failed");
+    }
     return response.json();
   },
 
@@ -17,10 +41,13 @@ export const apiClient = {
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) throw new Error("Login failed");
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.error || "Login failed");
+    }
     return response.json();
   },
 
@@ -28,10 +55,12 @@ export const apiClient = {
     const response = await fetch(`${API_BASE_URL}/api/accounts/google/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ token }),
     });
-    if (!response.ok) throw new Error("Google login failed");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.error || "Google login failed");
+    }
     return response.json();
   },
 
