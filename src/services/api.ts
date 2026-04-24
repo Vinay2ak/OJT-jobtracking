@@ -1,26 +1,37 @@
-﻿const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-backend-domain.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-backend-domain.com/api";
 
 export const apiClient = {
   // Auth endpoints
   async register(name: string, email: string, password: string, codingLanguages: string) {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/signup/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ name, email, password, codingLanguages }),
+      body: JSON.stringify({ username: name, email, password, codingLanguages }),
     });
     if (!response.ok) throw new Error("Registration failed");
     return response.json();
   },
 
   async login(email: string, password: string) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) throw new Error("Login failed");
+    return response.json();
+  },
+
+  async loginWithGoogle(token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/google/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ token }),
+    });
+    if (!response.ok) throw new Error("Google login failed");
     return response.json();
   },
 

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { apiClient } from '../services/api';
 
 interface User {
   id: string;
@@ -11,7 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  loginWithGoogle: (email: string, name?: string) => Promise<boolean>;
+  loginWithGoogle: (token: string) => Promise<boolean>;
   register: (name: string, email: string, password: string, codingLanguages: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -39,54 +40,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      // Mock login - in real app, this would call an API
-      const storedUsers = localStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
+      const data = await apiClient.login(email, password);
       
-      const foundUser = users.find((u: Record<string, string>) => u.email === email && u.password === password);
-      
-      if (foundUser) {
-        const userData = {
-          id: foundUser.id,
-          email: foundUser.email,
-          name: foundUser.name,
-        };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        return true;
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
       
-      return false;
+      const userData = {
+        id: data.user?.id || data.id,
+        email: data.user?.email || data.email,
+        name: data.user?.name || data.name,
+      };
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return true;
     } catch (error) {
       console.error('Error during login:', error);
       return false;
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (email: string, name?: string): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (token: string): Promise<boolean> => {
     try {
-      // In a real app this would be handled by Google OAuth,
-      // here we simulate signing in directly via an account chooser token flow.
-      const storedUsers = localStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
-
-      let user = users.find((u: Record<string, string>) => u.email === email);
-      if (!user) {
-        // Auto-register mock Google accounts
-        user = {
-          id: Date.now().toString(),
-          email,
-          name: name || email.split('@')[0],
-          password: 'google-oauth-mock'
-        };
-        users.push(user);
-        localStorage.setItem('users', JSON.stringify(users));
+      const data = await apiClient.loginWithGoogle(token);
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
-
+      
       const userData = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: data.user?.id || data.id,
+        email: data.user?.email || data.email,
+        name: data.user?.name || data.name,
       };
 
       setUser(userData);
@@ -100,33 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (name: string, email: string, password: string, codingLanguages: string): Promise<boolean> => {
     try {
-      // Mock signup - in real app, this would call an API
-      const storedUsers = localStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
+      const data = await apiClient.register(name, email, password, codingLanguages);
       
-      // Check if user already exists
-      const existingUser = users.find((u: Record<string, string>) => u.email === email);
-      if (existingUser) {
-        return false;
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
       
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password, // In real app, never store plain passwords!
-        codingLanguages,
-      };
-      
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-      
       const userData = {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        codingLanguages: newUser.codingLanguages,
+        id: data.user?.id || data.id,
+        email: data.user?.email || data.email,
+        name: data.user?.name || data.name,
       };
+      
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       

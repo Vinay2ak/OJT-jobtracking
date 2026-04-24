@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -8,7 +9,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -28,9 +29,27 @@ export function Login() {
     setIsLoading(false);
   };
 
-  const handleGoogleLogin = () => {
-    navigate('/google-signin');
-  };
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      setError('');
+      try {
+        // Send the access token to the backend
+        const success = await loginWithGoogle(tokenResponse.access_token);
+        if (success) {
+          navigate('/dashboard');
+        } else {
+          setError('Google login failed. Please try again.');
+        }
+      } catch (err) {
+        setError('An error occurred during Google Login.');
+      }
+      setIsLoading(false);
+    },
+    onError: () => {
+      setError('Google login was cancelled or failed.');
+    }
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">

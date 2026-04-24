@@ -35,7 +35,7 @@ export function Register() {
     if (success) {
       navigate('/dashboard');
     } else {
-      setError('An account with this email already exists');
+      setError('Registration failed: Email already exists or backend is not connected');
     }
     
     setIsLoading(false);

@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { ClipboardList, Target, Calendar, Users, FileText, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
+import { apiClient } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TrackingApplication {
   id: string;
@@ -6,25 +9,41 @@ interface TrackingApplication {
   position: string;
   appliedDate: string;
   lastUpdate: string;
+  status?: string;
 }
 
 export function JobTrackingSystem() {
-  // Force all dashboard numbers to zero
-  const totalApplications = 0;
-  const activeApplications = 0;
-  const interviews = 0;
-  const offers = 0;
+  const { user } = useAuth();
+  const [applications, setApplications] = useState<TrackingApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // No applications shown in the pipeline
-  const applicationsByStatus: Record<
-    'applied' | 'interviewing' | 'offered' | 'accepted' | 'rejected',
-    TrackingApplication[]
-  > = {
-    applied: [],
-    interviewing: [],
-    offered: [],
-    accepted: [],
-    rejected: [],
+  useEffect(() => {
+    async function fetchData() {
+      if (!user?.id) return;
+      try {
+        const data = await apiClient.getApplications(user.id);
+        setApplications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch applications", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, [user]);
+
+  // Compute dynamic stats
+  const totalApplications = applications.length;
+  const activeApplications = applications.filter(a => ['applied', 'interviewing', 'offered'].includes((a.status || '').toLowerCase())).length;
+  const interviews = applications.filter(a => (a.status || '').toLowerCase() === 'interviewing').length;
+  const offers = applications.filter(a => (a.status || '').toLowerCase() === 'offered').length;
+
+  const applicationsByStatus = {
+    applied: applications.filter(a => (a.status || '').toLowerCase() === 'applied'),
+    interviewing: applications.filter(a => (a.status || '').toLowerCase() === 'interviewing'),
+    offered: applications.filter(a => (a.status || '').toLowerCase() === 'offered'),
+    accepted: applications.filter(a => (a.status || '').toLowerCase() === 'accepted'),
+    rejected: applications.filter(a => (a.status || '').toLowerCase() === 'rejected'),
   };
 
   return (
