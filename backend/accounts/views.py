@@ -34,27 +34,29 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 OTP.objects.filter(email=user.email).delete()
                 OTP.objects.create(email=user.email, otp=otp)
                 
-                print(f"[DIAGNOSTIC] Password OK for {user.email}. Sending OTP...")
-                send_mail(
-                    'Your Login Verification Code',
-                    f'Your code is: {otp}',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
-                )
-                print(f"[DIAGNOSTIC] SUCCESS: OTP sent to {user.email}")
+                print(f"!!! LOGIN OTP FOR {user.email} IS: {otp} !!!")
                 
+                try:
+                    send_mail(
+                        'Your Login Verification Code',
+                        f'Your code is: {otp}',
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                    mail_status = "SENT"
+                except Exception as e:
+                    print(f"WARNING: Gmail failed but proceeding. Error: {str(e)}")
+                    mail_status = "FAILED_BUT_LOGGED"
+
                 return Response({
                     "message": "OTP_SENT",
                     "email": user.email,
-                    "detail": "Password verified. Please enter the OTP from your Gmail."
+                    "mail_status": mail_status,
+                    "detail": "Password verified. If email doesn't arrive, check server logs."
                 }, status=200)
             else:
                 return Response({"error": "Invalid email or password"}, status=401)
-                
-        except Exception as e:
-            print(f"[DIAGNOSTIC] ERROR in Login: {str(e)}")
-            return Response({"error": str(e)}, status=500)
 
 
 
