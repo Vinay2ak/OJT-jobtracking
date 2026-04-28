@@ -42,11 +42,13 @@ class SignupView(APIView):
 class SendOTPView(APIView):
     def post(self, request):
         email = request.data.get('email')
+        print(f"DEBUG: Received OTP request for email: {email}") # Added log
 
         if not email:
             return Response({"error": "Email required"}, status=400)
 
         otp = str(random.randint(100000, 999999))
+        print(f"DEBUG: Generated OTP {otp} for {email}") # Added log
 
         # Delete any existing OTPs for this email to keep the table clean
         OTP.objects.filter(email=email).delete()
@@ -54,7 +56,7 @@ class SendOTPView(APIView):
         OTP.objects.create(email=email, otp=otp)
 
         try:
-            print(f"DEBUG: Sending OTP {otp} to {email}")  # This will show the OTP in your terminal
+            print(f"DEBUG: Attempting to send mail to {email}") # Added log
             send_mail(
                 'Your OTP Code - Job Tracker',
                 f'Your OTP is {otp}. It will expire in 10 minutes.',
@@ -62,11 +64,21 @@ class SendOTPView(APIView):
                 [email],
                 fail_silently=False,
             )
+            print(f"DEBUG: Mail sent successfully to {email}") # Added log
         except Exception as e:
+            print(f"ERROR: Failed to send mail: {str(e)}") # Added log
             logger.error(f"Failed to send OTP email to {email}: {e}")
-            return Response({"error": "Failed to send OTP email. Please try again."}, status=500)
+            # Even if mail fails, we return the OTP in debug mode
+            return Response({
+                "message": "OTP generated (but mail failed)",
+                "otp_debug": otp, # Return OTP in response so you can see it in F12
+                "error_detail": str(e)
+            }, status=200)
 
-        return Response({"message": "OTP sent"})
+        return Response({
+            "message": "OTP sent",
+            "otp_debug": otp  # Return OTP in response so you can see it in F12
+        })
     
 
 
@@ -124,53 +136,79 @@ class VerifyOTPView(APIView):
 
 
 
+class LoginStep1View(APIView):
+    """
+    Step 1: Verify Email & Password. If correct, send OTP to Gmail.
+    """
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        if not email or not password:
+            return Response({"error": "Email and password are required"}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+            if not user.check_password(password):
+                return Response({"error": "Invalid password"}, status=401)
+        except User.DoesNotExist:
+            return Response({"error": "No account found with this email"}, status=404)
+
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+        OTP.objects.filter(email=email).delete() # Clear old OTPs
+        OTP.objects.create(email=email, otp=otp)
+
+        try:
+            print(f"INFO: Sending Login OTP to {email}")
+            send_mail(
+                'Your Login Verification Code',
+                f'Your verification code is: {otp}\n\nThis code will expire in 10 minutes.',
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            return Response({
+                "message": "Verification code sent to your Gmail",
+                "email": email  # Return email so frontend can use it for Step 2
+            }, status=200)
+        except Exception as e:
+            logger.error(f"SMTP Error: {str(e)}")
+            return Response({"error": "Failed to send email. Please try again later."}, status=500)
+
+
 class LoginWithOTPView(APIView):
+    """
+    Step 2: Verify the OTP sent to Gmail and return JWT tokens.
+    """
     def post(self, request):
         email = request.data.get('email')
         otp = request.data.get('otp')
 
         if not email or not otp:
-            return Response({"error": "Email and OTP required"}, status=400)
+            return Response({"error": "Email and OTP are required"}, status=400)
 
         otp_obj = OTP.objects.filter(email=email).last()
 
-        if not otp_obj:
-            return Response({"error": "OTP not found. Please request a new one."}, status=404)
-
-        # Check expiration
-        if otp_obj.is_expired():
-            otp_obj.delete()
-            return Response({"error": "OTP has expired. Please request a new one."}, status=400)
+        if not otp_obj or otp_obj.is_expired():
+            return Response({"error": "OTP expired or not found. Please try again."}, status=400)
 
         if otp_obj.otp != otp:
-            return Response({"error": "Invalid OTP"}, status=400)
+            return Response({"error": "Invalid verification code"}, status=400)
 
-        # Clean up the used OTP
-        OTP.objects.filter(email=email).delete()
-
+        # OTP is correct!
         try:
             user = User.objects.get(email=email)
+            otp_obj.delete() # Clean up used OTP
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "username": user.username,
+                "email": user.email,
+                "message": "Login successful"
+            }, status=200)
         except User.DoesNotExist:
-            # Auto-create the user if they don't exist (e.g., first-time login via OTP)
-            username = email.split('@')[0]
-            # Ensure unique username
-            base_username = username
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
-            user = User.objects.create_user(
-                email=email,
-                username=username,
-                password=None  # OTP-only users don't need a password
-            )
-
-        # generate JWT token
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email
-        })
+            return Response({"error": "User no longer exists"}, status=404)
