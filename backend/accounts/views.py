@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, authenticate
 from .models import OTP
-from .serializers import SignupSerializer, UserSerializer
+from .serializers import SignupSerializer
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
