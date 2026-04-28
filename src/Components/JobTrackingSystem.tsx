@@ -15,7 +15,6 @@ interface TrackingApplication {
 export function JobTrackingSystem() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<TrackingApplication[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -26,7 +25,7 @@ export function JobTrackingSystem() {
       } catch (error) {
         console.error("Failed to fetch applications", error);
       } finally {
-        setIsLoading(false);
+        // Data fetch complete
       }
     }
     fetchData();
