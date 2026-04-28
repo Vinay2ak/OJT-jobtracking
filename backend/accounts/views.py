@@ -159,8 +159,12 @@ class LoginStep1View(APIView):
         OTP.objects.filter(email=email).delete() # Clear old OTPs
         OTP.objects.create(email=email, otp=otp)
 
+        # Diagnostic logging
+        print(f"[DIAGNOSTIC] Attempting to send mail via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+        print(f"[DIAGNOSTIC] SSL: {settings.EMAIL_USE_SSL}, TLS: {settings.EMAIL_USE_TLS}")
+        print(f"[DIAGNOSTIC] From Email: {settings.DEFAULT_FROM_EMAIL}")
+
         try:
-            print(f"INFO: Sending Login OTP to {email}")
             send_mail(
                 'Your Login Verification Code',
                 f'Your verification code is: {otp}\n\nThis code will expire in 10 minutes.',
@@ -168,13 +172,15 @@ class LoginStep1View(APIView):
                 [email],
                 fail_silently=False,
             )
+            print(f"[DIAGNOSTIC] SUCCESS: Mail accepted by SMTP server for {email}")
             return Response({
                 "message": "Verification code sent to your Gmail",
-                "email": email  # Return email so frontend can use it for Step 2
+                "email": email
             }, status=200)
         except Exception as e:
+            print(f"[DIAGNOSTIC] FAILED: SMTP Error: {str(e)}")
             logger.error(f"SMTP Error: {str(e)}")
-            return Response({"error": "Failed to send email. Please try again later."}, status=500)
+            return Response({"error": f"Mail failed: {str(e)}"}, status=500)
 
 
 class LoginWithOTPView(APIView):
