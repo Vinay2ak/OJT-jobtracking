@@ -57,6 +57,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 }, status=200)
             else:
                 return Response({"error": "Invalid email or password"}, status=401)
+                
+        except Exception as e:
+            print(f"ERROR in Login View: {str(e)}")
+            return Response({"error": str(e)}, status=500)
 
 
 
