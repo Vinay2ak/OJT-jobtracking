@@ -18,5 +18,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/token/', CustomTokenObtainPairView.as_view()),
+    
+    # Safety net for double /api/api/ calls
+    path('api/api/accounts/', include('accounts.urls')),
+    path('api/api/token/', CustomTokenObtainPairView.as_view()),
+    
     path('api/jobs/', include('jobs.urls')),
 ]
