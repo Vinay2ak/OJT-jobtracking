@@ -54,6 +54,7 @@ class SendOTPView(APIView):
         OTP.objects.create(email=email, otp=otp)
 
         try:
+            print(f"DEBUG: Sending OTP {otp} to {email}")  # This will show the OTP in your terminal
             send_mail(
                 'Your OTP Code - Job Tracker',
                 f'Your OTP is {otp}. It will expire in 10 minutes.',
