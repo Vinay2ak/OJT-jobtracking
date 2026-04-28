@@ -51,9 +51,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
                 return Response({
                     "message": "OTP_SENT",
+                    "otp_for_debug": otp,  # <--- YOU CAN SEE THE CODE HERE IN THE NETWORK TAB
                     "email": user.email,
                     "mail_status": mail_status,
-                    "detail": "Password verified. If email doesn't arrive, check server logs."
+                    "detail": "Password verified. Check the Network Tab 'Response' for your code if email fails."
                 }, status=200)
             else:
                 return Response({"error": "Invalid email or password"}, status=401)
