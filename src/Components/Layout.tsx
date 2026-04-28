@@ -30,7 +30,7 @@ export function Layout() {
     { path: '/applications', label: 'Applications', icon: '💼' },
     { path: '/tracking', label: 'Job Tracking System', icon: '📋' },
     { path: '/interviews', label: 'Upcoming Interviews', icon: '📅' },
-    { path: '/success', label: 'Success Rate', icon: '📈' },
+
     { path: '/analytics', label: 'Analytics', icon: '📊' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ], []);

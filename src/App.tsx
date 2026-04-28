@@ -8,7 +8,7 @@ import { JobTrackingSystem } from './Components/JobTrackingSystem';
 import { UpcomingInterviews } from './Components/UpcomingInterviews';
 import { Notifications } from './Components/Notifications';
 
-import { SuccessRate } from './Components/SuccessRate';
+
 import { Analytics } from './Components/Analytics';
 import { Settings } from './Components/Setting';
 import { Layout } from './Components/Layout';
@@ -52,7 +52,7 @@ function App() {
         <Route path="/interviews" element={<UpcomingInterviews />} />
         <Route path="/notifications" element={<Notifications />} />
 
-        <Route path="/success" element={<SuccessRate />} />
+
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
