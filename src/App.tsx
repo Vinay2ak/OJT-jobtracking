@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Register } from './Components/Register';
 import { Login } from './Components/Login';
+import { OtpVerification } from './Components/OtpVerification';
 import { Dashboard } from './Components/Dashboard';
 import { Applications } from './Components/Application';
 import { JobTrackingSystem } from './Components/JobTrackingSystem';
@@ -36,6 +37,7 @@ function App() {
       />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/verify-otp" element={user ? <Navigate to="/dashboard" replace /> : <OtpVerification />} />
 
       <Route
         element={

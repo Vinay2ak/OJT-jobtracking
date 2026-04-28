@@ -64,6 +64,21 @@ export const apiClient = {
     return response.json();
   },
 
+  async verifyOtp(email: string, otp: string) {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.error || "Invalid OTP");
+    }
+    return response.json();
+  },
+
+
   // Job applications
   async getApplications(userId: string) {
     const token = localStorage.getItem("token");
