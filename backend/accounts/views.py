@@ -19,11 +19,42 @@ logger = logging.getLogger(__name__)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            username = request.data.get('username') or request.data.get('email')
-            logger.info(f"SUCCESSFUL LOGIN: User '{username}' has logged in.")
-        return response
+        # First, let the standard login verify the password
+        try:
+            # We don't call super().post yet because we don't want to return tokens yet
+            username = request.data.get('email') or request.data.get('username')
+            password = request.data.get('password')
+            
+            from django.contrib.auth import authenticate
+            user = authenticate(username=username, password=password)
+            
+            if user is not None:
+                # Password is correct! Now trigger the OTP
+                otp = str(random.randint(100000, 999999))
+                OTP.objects.filter(email=user.email).delete()
+                OTP.objects.create(email=user.email, otp=otp)
+                
+                print(f"[DIAGNOSTIC] Password OK for {user.email}. Sending OTP...")
+                send_mail(
+                    'Your Login Verification Code',
+                    f'Your code is: {otp}',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                print(f"[DIAGNOSTIC] SUCCESS: OTP sent to {user.email}")
+                
+                return Response({
+                    "message": "OTP_SENT",
+                    "email": user.email,
+                    "detail": "Password verified. Please enter the OTP from your Gmail."
+                }, status=200)
+            else:
+                return Response({"error": "Invalid email or password"}, status=401)
+                
+        except Exception as e:
+            print(f"[DIAGNOSTIC] ERROR in Login: {str(e)}")
+            return Response({"error": str(e)}, status=500)
 
 
 
