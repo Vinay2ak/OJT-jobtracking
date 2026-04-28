@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-backend-domain.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://ojt-jobtracking-1906.onrender.com";
 
 export const apiClient = {
   // Auth endpoints
