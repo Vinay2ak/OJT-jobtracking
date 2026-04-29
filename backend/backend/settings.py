@@ -128,24 +128,10 @@ AUTH_USER_MODEL = 'accounts.User'
 
 
 
-# Force IPv4 for SMTP connections (fixes Render IPv6 "Network unreachable" error)
-import socket
-_original_getaddrinfo = socket.getaddrinfo
-def _forced_ipv4_getaddrinfo(*args, **kwargs):
-    responses = _original_getaddrinfo(*args, **kwargs)
-    ipv4 = [r for r in responses if r[0] == socket.AF_INET]
-    return ipv4 if ipv4 else responses
-socket.getaddrinfo = _forced_ipv4_getaddrinfo
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'jateen1906@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'mrcm jiib nzkt vgpm')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
-EMAIL_TIMEOUT = 30
+# Email via Brevo HTTP API (Render blocks SMTP, so we use HTTP instead)
+# Set BREVO_API_KEY in Render Environment Variables
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'jateen1906@gmail.com')
 
 
 
