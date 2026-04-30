@@ -8,20 +8,27 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Create admin superuser if not exists'
+    help = 'Create admin superuser (force reset if exists)'
 
     def handle(self, *args, **options):
         email = 'admin@jobtracker.com'
         password = 'Admin@1906'
         username = 'admin'
 
-        if User.objects.filter(email=email).exists():
-            self.stdout.write(self.style.WARNING(f'Admin user {email} already exists'))
-            return
+        # Delete existing admin if exists and recreate fresh
+        User.objects.filter(email=email).delete()
+        User.objects.filter(username=username).delete()
 
-        User.objects.create_superuser(
+        user = User.objects.create_superuser(
             username=username,
             email=email,
             password=password,
         )
-        self.stdout.write(self.style.SUCCESS(f'Superuser created: {email}'))
+        user.is_active = True
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
+
+        self.stdout.write(self.style.SUCCESS(
+            f'Superuser created: email={email}, password={password}'
+        ))
