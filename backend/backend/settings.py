@@ -133,6 +133,15 @@ AUTH_USER_MODEL = 'accounts.User'
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'jateen1906@gmail.com')
 
+# Google OAuth2 (for Gmail integration + Google Login)
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://ojt-jobtracking-1906.onrender.com/api/accounts/gmail/callback/')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://jobtracking-tau.vercel.app')
+
+# Gemini API (for AI email parsing)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
 
 
 
