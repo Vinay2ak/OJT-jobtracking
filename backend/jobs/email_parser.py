@@ -2,9 +2,17 @@
 AI Email Parser — Uses Gmail API + Gemini AI to detect job status changes.
 Scans user's Gmail for interview invites, offers, and rejections,
 then updates job statuses automatically.
+
+PRECISION RULES:
+1. Only match emails that mention BOTH company name AND role/position
+2. Status can only move FORWARD (applied→interviewing→offered→accepted), never backwards
+3. Rejection is always final — can happen from any status
+4. AI confidence must be >= 0.7 for status updates
+5. Sender email domain should match company when possible
 """
 import json
 import re
+import base64
 import urllib.request
 import urllib.parse
 import logging
@@ -14,34 +22,82 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Status progression order — status can only move FORWARD, never back
+STATUS_RANK = {
+    'applied': 1,
+    'viewed': 2,
+    'interviewing': 3,
+    'interview': 3,
+    'offered': 4,
+    'offer': 4,
+    'accepted': 5,
+    'rejected': 99,   # rejection can happen from any stage
+    'withdrawn': 100,
+}
 
-def get_gemini_classification(email_subject, email_body, company_name, role_name):
+
+def is_valid_status_transition(current_status, new_status):
+    """
+    Ensure status only moves FORWARD.
+    Example: applied → interviewing ✅
+             interviewing → applied ❌ (going backwards)
+             applied → rejected ✅ (rejection is always valid)
+    """
+    current_rank = STATUS_RANK.get(current_status, 0)
+    new_rank = STATUS_RANK.get(new_status, 0)
+
+    # Rejection and withdrawal can happen from any stage
+    if new_status in ('rejected', 'withdrawn'):
+        return True
+
+    # New status must be higher rank than current
+    return new_rank > current_rank
+
+
+def get_gemini_classification(email_subject, email_body, company_name, role_name, sender_email=''):
     """Use Gemini AI to classify an email as interview/offer/rejection/none."""
     if not settings.GEMINI_API_KEY:
         print("GEMINI_API_KEY not set, falling back to keyword matching", flush=True)
-        return keyword_fallback(email_subject, email_body)
+        return keyword_fallback(email_subject, email_body, company_name)
 
-    prompt = f"""You are an AI that classifies job application emails.
+    prompt = f"""You are a STRICT AI that classifies job application emails.
+You MUST verify the email is ACTUALLY about a specific job application before classifying.
 
-Given this email about a job application at "{company_name}" for the role "{role_name}":
+CONTEXT:
+- The user applied at company: "{company_name}"
+- For the role: "{role_name}"
+- Sender email: {sender_email}
 
+EMAIL TO ANALYZE:
 Subject: {email_subject}
-Body (first 1500 chars): {email_body[:1500]}
+Body (first 2000 chars): {email_body[:2000]}
 
-Classify this email into EXACTLY ONE category:
-- "interview_scheduled" — if the email is scheduling/inviting for an interview (include meeting link and date if found)
-- "offer" — if the email is extending a job offer
-- "rejection" — if the email is a rejection/regret notice
-- "none" — if the email is unrelated to job status (newsletters, job alerts, etc.)
+STRICT RULES:
+1. The email MUST be specifically about this company AND this role (or a closely matching role)
+2. Generic job alerts, newsletters, promotional emails = "none"
+3. Emails from job boards (LinkedIn notifications, Naukri alerts) that just list jobs = "none"
+4. Only classify as interview/offer/rejection if the email is DIRECTLY from the company or their recruiter
+5. The email body must clearly indicate a status change, not just an acknowledgement
+6. "We received your application" or "Thank you for applying" = "none" (this is just confirmation, not a status change)
 
-Respond ONLY in this JSON format:
-{{"classification": "interview_scheduled|offer|rejection|none", "meeting_link": "URL or empty", "interview_date": "ISO date or empty", "confidence": 0.0-1.0}}
+CLASSIFY into EXACTLY ONE:
+- "interview_scheduled" — ONLY if they are explicitly inviting for an interview round, assessment, or call. Must mention specific time/date or ask to schedule.
+- "offer" — ONLY if they are formally extending a job offer with compensation details or start date
+- "rejection" — ONLY if they clearly state the candidate is not selected / not moving forward
+- "none" — Everything else (confirmations, newsletters, alerts, unrelated emails)
+
+ALSO EXTRACT (if interview_scheduled):
+- meeting_link: Zoom/Meet/Teams URL if present
+- interview_date: Date/time in ISO format if mentioned
+
+Respond ONLY in JSON:
+{{"classification": "interview_scheduled|offer|rejection|none", "meeting_link": "URL or empty", "interview_date": "ISO date or empty", "confidence": 0.0-1.0, "reason": "brief explanation"}}
 """
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={settings.GEMINI_API_KEY}"
     data = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
+        "generationConfig": {"temperature": 0.05, "maxOutputTokens": 300}
     }
 
     try:
@@ -58,16 +114,31 @@ Respond ONLY in this JSON format:
         # Extract JSON from response
         json_match = re.search(r'\{.*\}', text, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group())
+            parsed = json.loads(json_match.group())
+            print(f"  Gemini result for {company_name}: {parsed.get('classification')} "
+                  f"(confidence: {parsed.get('confidence')}, reason: {parsed.get('reason', 'N/A')})", flush=True)
+            return parsed
         return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
     except Exception as e:
         print(f"Gemini API error: {e}", flush=True)
-        return keyword_fallback(email_subject, email_body)
+        return keyword_fallback(email_subject, email_body, company_name)
 
 
-def keyword_fallback(subject, body):
+def keyword_fallback(subject, body, company_name=''):
     """Fallback classification using keywords when Gemini is unavailable."""
     text = (subject + " " + body).lower()
+    company_lower = company_name.lower() if company_name else ''
+
+    # FIRST CHECK: Does the email even mention the company?
+    if company_lower and company_lower not in text:
+        return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
+
+    # Skip common non-status emails
+    skip_phrases = ['thank you for applying', 'application received', 'we received your',
+                    'job alert', 'new jobs', 'similar jobs', 'recommended for you',
+                    'unsubscribe', 'email preferences', 'newsletter']
+    if any(phrase in text for phrase in skip_phrases):
+        return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
 
     # Extract meeting links
     meeting_link = ""
@@ -82,28 +153,33 @@ def keyword_fallback(subject, body):
             meeting_link = match.group()
             break
 
-    # Classification based on keywords
-    interview_keywords = ['interview', 'schedule', 'round', 'technical assessment', 'coding test',
-                          'meet the team', 'discussion', 'call with', 'zoom', 'google meet', 'teams meeting']
-    offer_keywords = ['offer letter', 'pleased to offer', 'congratulations', 'welcome aboard',
-                      'job offer', 'compensation', 'start date', 'onboarding']
+    # Offer keywords (most specific first)
+    offer_keywords = ['offer letter', 'pleased to offer', 'we are delighted to offer',
+                      'welcome aboard', 'formal offer', 'compensation package',
+                      'we would like to extend an offer']
+    # Rejection keywords
     rejection_keywords = ['unfortunately', 'regret to inform', 'not moving forward',
-                          'position has been filled', 'other candidates', 'not selected',
-                          'decided not to proceed', 'wish you the best']
+                          'position has been filled', 'decided to move forward with other',
+                          'not selected', 'decided not to proceed', 'will not be moving',
+                          'after careful consideration']
+    # Interview keywords (require action words, not just "interview" mention)
+    interview_keywords = ['schedule an interview', 'invite you for', 'interview scheduled',
+                          'please join', 'round of interview', 'technical round',
+                          'assessment link', 'coding challenge', 'interview on',
+                          'meeting invite', 'would like to discuss your application']
 
     if any(kw in text for kw in offer_keywords):
-        return {"classification": "offer", "meeting_link": "", "interview_date": "", "confidence": 0.7}
+        return {"classification": "offer", "meeting_link": "", "interview_date": "", "confidence": 0.75}
     if any(kw in text for kw in rejection_keywords):
-        return {"classification": "rejection", "meeting_link": "", "interview_date": "", "confidence": 0.7}
+        return {"classification": "rejection", "meeting_link": "", "interview_date": "", "confidence": 0.75}
     if any(kw in text for kw in interview_keywords):
-        return {"classification": "interview_scheduled", "meeting_link": meeting_link, "interview_date": "", "confidence": 0.6}
+        return {"classification": "interview_scheduled", "meeting_link": meeting_link, "interview_date": "", "confidence": 0.65}
 
     return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
 
 
 def refresh_gmail_token(gmail_connection):
     """Refresh an expired Gmail OAuth2 access token."""
-    from accounts.models import GmailConnection
     url = "https://oauth2.googleapis.com/token"
     data = urllib.parse.urlencode({
         'client_id': settings.GOOGLE_CLIENT_ID,
@@ -140,38 +216,85 @@ def search_gmail(access_token, query, max_results=10):
 
 
 def get_email_content(access_token, message_id):
-    """Get the subject and body of a specific email."""
+    """Get the subject, body, and sender of a specific email."""
     url = f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}?format=full"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {access_token}"})
     try:
         response = urllib.request.urlopen(req, timeout=15)
         data = json.loads(response.read().decode('utf-8'))
 
-        # Extract subject
+        # Extract headers
         headers = data.get('payload', {}).get('headers', [])
         subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), '')
+        sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), '')
+        date_str = next((h['value'] for h in headers if h['name'].lower() == 'date'), '')
 
-        # Extract body
+        # Extract body (try plain text first, then HTML)
         body = ''
         payload = data.get('payload', {})
+
+        def extract_body_from_parts(parts):
+            """Recursively extract text from email parts."""
+            for part in parts:
+                mime = part.get('mimeType', '')
+                if mime == 'text/plain' and part.get('body', {}).get('data'):
+                    return base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
+                if 'parts' in part:
+                    result = extract_body_from_parts(part['parts'])
+                    if result:
+                        return result
+            return ''
+
         if 'body' in payload and payload['body'].get('data'):
-            import base64
             body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8', errors='ignore')
         elif 'parts' in payload:
-            for part in payload['parts']:
-                if part.get('mimeType') == 'text/plain' and part.get('body', {}).get('data'):
-                    import base64
-                    body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
-                    break
+            body = extract_body_from_parts(payload['parts'])
 
-        return subject, body
+        return subject, body, sender, date_str
     except Exception as e:
         print(f"Email content error: {e}", flush=True)
-        return '', ''
+        return '', '', '', ''
+
+
+def email_matches_company(sender_email, subject, body, company_name):
+    """
+    Verify that an email is actually from/about a specific company.
+    Returns True only if there's a strong match.
+    """
+    company_lower = company_name.lower().strip()
+    sender_lower = sender_email.lower()
+    text_lower = (subject + " " + body).lower()
+
+    # Check 1: Company name appears in sender email domain
+    # e.g., "hr@google.com" matches "Google"
+    company_words = company_lower.replace('.', ' ').replace('-', ' ').split()
+    sender_domain = sender_lower.split('@')[-1] if '@' in sender_lower else ''
+    for word in company_words:
+        if len(word) >= 3 and word in sender_domain:
+            return True
+
+    # Check 2: Company name appears in sender display name
+    # e.g., "Google Recruiting <noreply@google.com>"
+    if company_lower in sender_lower:
+        return True
+
+    # Check 3: Company name appears in the email subject
+    if company_lower in (subject.lower()):
+        return True
+
+    # Check 4: Company name appears multiple times in body (strong signal)
+    company_count = text_lower.count(company_lower)
+    if company_count >= 2:
+        return True
+
+    return False
 
 
 def scan_user_emails(user):
-    """Main function: scan a user's Gmail for job status updates."""
+    """
+    Main function: scan a user's Gmail for job status updates.
+    PRECISION-OPTIMIZED: Only updates status when there's high confidence match.
+    """
     from .models import Job, Interview, EmailScanLog
 
     try:
@@ -189,40 +312,90 @@ def scan_user_emails(user):
             return 0, []
 
     access_token = gmail_conn.access_token
-    jobs = Job.objects.filter(user=user, status__in=['applied', 'interviewing', 'interview', 'viewed'])
+
+    # Only scan jobs that can still receive updates
+    jobs = Job.objects.filter(
+        user=user,
+        status__in=['applied', 'viewed', 'interviewing', 'interview']
+    )
     updates = []
     emails_scanned = 0
+    already_scanned_msg_ids = set()
+
+    print(f"\n=== Scanning emails for {user.email} ({jobs.count()} active jobs) ===", flush=True)
 
     for job in jobs:
-        # Search Gmail for emails mentioning this company
-        # Search in all folders including spam
-        query = f"from:{job.company} OR subject:{job.company} in:anywhere newer_than:30d"
+        print(f"\n  Checking: {job.company} - {job.role} (current: {job.status})", flush=True)
+
+        # PRECISE Gmail search: company name in subject OR from company domain
+        # Use quotes to match exact company name, not partial words
+        company_query = f'"{job.company}"'
+        query = f'({company_query}) in:anywhere newer_than:30d -category:promotions -category:social'
         messages = search_gmail(access_token, query, max_results=5)
         emails_scanned += len(messages)
 
+        if not messages:
+            print(f"    No emails found for {job.company}", flush=True)
+            continue
+
         for msg in messages:
-            subject, body = get_email_content(access_token, msg['id'])
+            # Skip already processed emails in this scan
+            if msg['id'] in already_scanned_msg_ids:
+                continue
+            already_scanned_msg_ids.add(msg['id'])
+
+            subject, body, sender, date_str = get_email_content(access_token, msg['id'])
             if not subject and not body:
                 continue
 
-            # Classify email with AI
-            result = get_gemini_classification(subject, body, job.company, job.role)
-
-            if result['classification'] == 'none' or result.get('confidence', 0) < 0.5:
+            # VERIFICATION: Does this email actually match this company?
+            if not email_matches_company(sender, subject, body, job.company):
+                print(f"    Skipping email (sender '{sender}' doesn't match '{job.company}')", flush=True)
                 continue
 
-            # Update job status
+            print(f"    Analyzing email: '{subject}' from {sender}", flush=True)
+
+            # Classify with AI
+            result = get_gemini_classification(subject, body, job.company, job.role, sender)
+
+            # STRICT: Require confidence >= 0.7 for any status change
+            confidence = result.get('confidence', 0)
+            if result['classification'] == 'none' or confidence < 0.7:
+                print(f"    Skipped: {result['classification']} (confidence: {confidence})", flush=True)
+                continue
+
+            # Determine new status
             new_status = None
             if result['classification'] == 'interview_scheduled':
                 new_status = 'interviewing'
+            elif result['classification'] == 'offer':
+                new_status = 'offered'
+            elif result['classification'] == 'rejection':
+                new_status = 'rejected'
 
-                # Create interview record with meeting link
+            if not new_status:
+                continue
+
+            # SAFETY: Verify status transition is valid (no going backwards)
+            if not is_valid_status_transition(job.status, new_status):
+                print(f"    Blocked invalid transition: {job.status} → {new_status}", flush=True)
+                continue
+
+            # All checks passed — update the job status
+            old_status = job.status
+            job.status = new_status
+            job.save()
+
+            # Create interview record if interview detected
+            if new_status == 'interviewing':
                 interview_date = None
                 if result.get('interview_date'):
                     try:
                         interview_date = datetime.fromisoformat(result['interview_date'])
+                        if timezone.is_naive(interview_date):
+                            interview_date = timezone.make_aware(interview_date)
                     except (ValueError, TypeError):
-                        interview_date = timezone.now() + timedelta(days=3)  # Default 3 days from now
+                        interview_date = timezone.now() + timedelta(days=3)
                 else:
                     interview_date = timezone.now() + timedelta(days=3)
 
@@ -231,30 +404,25 @@ def scan_user_emails(user):
                     user=user,
                     defaults={
                         'scheduled_date': interview_date,
-                        'meeting_link': result.get('meeting_link', ''),
+                        'meeting_link': result.get('meeting_link', '') or '',
                         'meeting_platform': detect_platform(result.get('meeting_link', '')),
                         'notes': f"Auto-detected from email: {subject}",
                     }
                 )
-            elif result['classification'] == 'offer':
-                new_status = 'offered'
-            elif result['classification'] == 'rejection':
-                new_status = 'rejected'
 
-            if new_status and job.status != new_status:
-                old_status = job.status
-                job.status = new_status
-                job.save()
-                updates.append({
-                    'job_id': job.id,
-                    'company': job.company,
-                    'role': job.role,
-                    'old_status': old_status,
-                    'new_status': new_status,
-                    'email_subject': subject,
-                })
-                print(f"Updated {job.company} - {job.role}: {old_status} -> {new_status}", flush=True)
-                break  # Only apply first relevant email per job
+            updates.append({
+                'job_id': job.id,
+                'company': job.company,
+                'role': job.role,
+                'old_status': old_status,
+                'new_status': new_status,
+                'email_subject': subject,
+                'confidence': confidence,
+                'reason': result.get('reason', ''),
+            })
+            print(f"    ✅ UPDATED: {job.company} - {job.role}: {old_status} → {new_status} "
+                  f"(confidence: {confidence})", flush=True)
+            break  # Only apply first relevant email per job
 
     # Log the scan
     EmailScanLog.objects.create(
@@ -264,6 +432,7 @@ def scan_user_emails(user):
         details=json.dumps(updates)
     )
 
+    print(f"\n=== Scan complete: {len(updates)} updates from {emails_scanned} emails ===\n", flush=True)
     return len(updates), updates
 
 
