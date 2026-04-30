@@ -1,25 +1,57 @@
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Video, User } from 'lucide-react';
+import { apiClient } from '../services/api';
 
 interface InterviewInfo {
   id: string;
   company: string;
   position: string;
-  date: string;
-  time: string;
-  type: string;
-  interviewer: string;
-  location: string;
-  round: string;
+  scheduled_date: string;
+  meeting_link: string;
+  meeting_platform: string;
+  interviewer_name: string;
   notes: string;
 }
 
 export function UpcomingInterviews() {
-  const interviews: InterviewInfo[] = [];
+  const [interviews, setInterviews] = useState<InterviewInfo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const getTypeIcon = (type: string) => {
-    if (type === 'Video Call') return Video;
-    if (type === 'Phone Call') return Calendar;
+  useEffect(() => {
+    apiClient.getUpcomingInterviews()
+      .then(data => setInterviews(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Failed to fetch interviews:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getTypeIcon = (platform: string) => {
+    const p = (platform || '').toLowerCase();
+    if (p.includes('zoom') || p.includes('meet') || p.includes('teams') || p.includes('video')) return Video;
+    if (p.includes('phone')) return Calendar;
     return MapPin;
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -30,13 +62,23 @@ export function UpcomingInterviews() {
           <Calendar className="w-8 h-8" />
           <h2 className="text-2xl font-semibold">Upcoming Interviews</h2>
         </div>
-        <p className="text-blue-100">You have {interviews.length} interviews scheduled this week</p>
+        <p className="text-blue-100">
+          {loading ? 'Loading...' : `You have ${interviews.length} interview${interviews.length !== 1 ? 's' : ''} scheduled`}
+        </p>
       </div>
 
       {/* Interviews List */}
       <div className="space-y-4">
+        {loading && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading interviews...</div>
+        )}
+        {!loading && interviews.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            No upcoming interviews scheduled.
+          </div>
+        )}
         {interviews.map((interview) => {
-          const TypeIcon = getTypeIcon(interview.type);
+          const TypeIcon = getTypeIcon(interview.meeting_platform);
           return (
             <div key={interview.id} className="surface rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -54,35 +96,32 @@ export function UpcomingInterviews() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">
-                        {new Date(interview.date).toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </span>
+                      <span className="text-sm">{formatDate(interview.scheduled_date)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Clock className="w-4 h-4 text-gray-400 dark:text-gray-400" />
-                      <span className="text-sm">{interview.time}</span>
+                      <span className="text-sm">{formatTime(interview.scheduled_date)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-400" />
-                      <span className="text-sm">{interview.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <User className="w-4 h-4 text-gray-400 dark:text-gray-400" />
-                      <span className="text-sm">{interview.interviewer}</span>
-                    </div>
+                    {interview.meeting_platform && (
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-400" />
+                        <span className="text-sm">{interview.meeting_platform}</span>
+                      </div>
+                    )}
+                    {interview.interviewer_name && (
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <User className="w-4 h-4 text-gray-400 dark:text-gray-400" />
+                        <span className="text-sm">{interview.interviewer_name}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-3">
-                    <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded-full text-sm">
-                      {interview.round}
-                    </span>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
-                      {interview.type}
-                    </span>
+                    {interview.meeting_platform && (
+                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                        {interview.meeting_platform}
+                      </span>
+                    )}
                   </div>
 
                   {interview.notes && (
@@ -95,10 +134,20 @@ export function UpcomingInterviews() {
                 </div>
 
                 <div className="flex md:flex-col gap-2">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">
-                    Join Meeting
-                  </button>
-
+                  {interview.meeting_link ? (
+                    <a
+                      href={interview.meeting_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap text-center"
+                    >
+                      Join Meeting
+                    </a>
+                  ) : (
+                    <button disabled className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm whitespace-nowrap cursor-not-allowed">
+                      No Link
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

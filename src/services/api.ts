@@ -126,4 +126,63 @@ export const apiClient = {
     if (!response.ok) throw new Error("Failed to delete application");
     return response.json();
   },
+
+  // Gmail connection
+  async connectGmail() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/connect/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to connect Gmail");
+    return response.json();
+  },
+
+  async getGmailStatus() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/status/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to get Gmail status");
+    return response.json();
+  },
+
+  async disconnectGmail() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/disconnect/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to disconnect Gmail");
+    return response.json();
+  },
+
+  async scanEmails() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/jobs/scan-emails/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to scan emails");
+    return response.json();
+  },
+
+  // Upcoming interviews
+  async getUpcomingInterviews() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/interviews/upcoming/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to fetch interviews");
+    return response.json();
+  },
+
+  // Dashboard stats
+  async getDashboardData() {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/jobs/dashboard/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to fetch dashboard data");
+    return response.json();
+  },
 };

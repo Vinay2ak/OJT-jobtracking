@@ -1,11 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Save, User, Lock } from 'lucide-react';
+import { Save, User, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../services/api';
 
 export function Settings() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Gmail integration state
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState('');
+  const [gmailLoading, setGmailLoading] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [gmailMessage, setGmailMessage] = useState('');
+
+  useEffect(() => {
+    apiClient.getGmailStatus()
+      .then(data => {
+        setGmailConnected(data.connected || false);
+        setGmailEmail(data.email || '');
+      })
+      .catch(() => {});
+  }, []);
 
   // Split name into first/last
   const nameParts = (user?.name || '').trim().split(' ');
@@ -51,9 +68,54 @@ export function Settings() {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
+  const handleConnectGmail = async () => {
+    setGmailLoading(true);
+    setGmailMessage('');
+    try {
+      const data = await apiClient.connectGmail();
+      if (data.auth_url) {
+        window.open(data.auth_url, '_blank');
+        setGmailMessage('Complete the authorization in the new tab, then refresh this page.');
+      }
+    } catch {
+      setGmailMessage('Failed to connect Gmail. Please try again.');
+    } finally {
+      setGmailLoading(false);
+    }
+  };
+
+  const handleDisconnectGmail = async () => {
+    setGmailLoading(true);
+    setGmailMessage('');
+    try {
+      await apiClient.disconnectGmail();
+      setGmailConnected(false);
+      setGmailEmail('');
+      setGmailMessage('Gmail disconnected successfully.');
+    } catch {
+      setGmailMessage('Failed to disconnect Gmail.');
+    } finally {
+      setGmailLoading(false);
+    }
+  };
+
+  const handleScanEmails = async () => {
+    setScanLoading(true);
+    setGmailMessage('');
+    try {
+      const data = await apiClient.scanEmails();
+      setGmailMessage(`Scan complete! ${data.new_applications || 0} new applications found.`);
+    } catch {
+      setGmailMessage('Failed to scan emails. Please try again.');
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
+    { id: 'email', label: 'Email Integration', icon: Mail },
   ];
 
   return (
@@ -249,6 +311,73 @@ export function Settings() {
                       <p className="text-sm text-gray-600 dark:text-gray-400">Active now</p>
                     </div>
                     <span className="text-sm text-green-600 dark:text-green-400">Current</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'email' && (
+            <div className="max-w-2xl space-y-6">
+              <div>
+                <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Gmail Integration</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Connect your Gmail to automatically scan for job application emails and track your applications.
+                </p>
+
+                {gmailMessage && (
+                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-200">
+                    <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+                    {gmailMessage}
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${gmailConnected ? 'bg-green-100 dark:bg-green-900/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                        <Mail className={`w-5 h-5 ${gmailConnected ? 'text-green-600' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">Gmail</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {gmailConnected ? `Connected: ${gmailEmail}` : 'Not connected'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${gmailConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
+                      {gmailConnected ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    {!gmailConnected ? (
+                      <button
+                        onClick={handleConnectGmail}
+                        disabled={gmailLoading}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        <Mail className="h-4 w-4" />
+                        {gmailLoading ? 'Connecting...' : 'Connect Gmail'}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleScanEmails}
+                          disabled={scanLoading}
+                          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {scanLoading ? 'Scanning...' : 'Scan Now'}
+                        </button>
+                        <button
+                          onClick={handleDisconnectGmail}
+                          disabled={gmailLoading}
+                          className="flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-red-600 transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 disabled:opacity-50"
+                        >
+                          {gmailLoading ? 'Disconnecting...' : 'Disconnect'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
