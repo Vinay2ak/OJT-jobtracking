@@ -14,8 +14,23 @@ def welcome(request):
         "documentation": "Endpoints available at /api/accounts/ and /api/jobs/"
     })
 
+def setup_admin(request):
+    """TEMPORARY: Visit this URL once to create admin. Delete after use."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    email = 'admin@jobtracker.com'
+    password = 'Admin@1906'
+    try:
+        User.objects.filter(email=email).delete()
+        User.objects.filter(username='admin').delete()
+        user = User.objects.create_superuser(username='admin', email=email, password=password)
+        return JsonResponse({"success": True, "email": email, "password": password, "id": user.id})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
 urlpatterns = [
     path('', welcome, name='welcome'),
+    path('setup-admin/', setup_admin),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/token/', CustomTokenObtainPairView.as_view()),
