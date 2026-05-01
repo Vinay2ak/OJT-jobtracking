@@ -44,17 +44,25 @@ class ApplicationListView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        # DEBUG: Log authentication info
-        print(f"DEBUG: POST /applications/ from user: {request.user}", flush=True)
-        print(f"DEBUG: Auth Header: {request.headers.get('Authorization', 'MISSING')[:20]}...", flush=True)
-        
-        if not request.user.is_authenticated:
-            return Response({"error": "You must be logged in to create an application."}, status=status.HTTP_401_UNAUTHORIZED)
+        # DEBUG: Check if we are receiving an authenticated user
+        if not request.user or not request.user.is_authenticated:
+            # Fallback check for manually provided token in case of weird middleware behavior
+            auth_header = request.headers.get('Authorization')
+            print(f"DEBUG: Unauthenticated request to /applications/. Auth Header present: {bool(auth_header)}", flush=True)
+            return Response({
+                "error": "Authentication Failed",
+                "detail": "No valid login session found. Please log out and log in again."
+            }, status=status.HTTP_401_UNAUTHORIZED)
             
         serializer = ApplicationSerializer(data=request.data)
         if serializer.is_valid():
-            job = serializer.save(user=request.user, source='manual')
-            return Response(ApplicationSerializer(job).data, status=status.HTTP_201_CREATED)
+            try:
+                job = serializer.save(user=request.user, source='manual')
+                return Response(ApplicationSerializer(job).data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print(f"ERROR saving job: {str(e)}", flush=True)
+                return Response({"error": "Failed to save application to database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
