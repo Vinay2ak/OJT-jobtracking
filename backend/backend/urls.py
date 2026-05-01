@@ -5,13 +5,12 @@ from django.contrib import admin
 from django.urls import path, include
 from accounts.views import CustomTokenObtainPairView
 from django.http import JsonResponse
-from jobs.views import ApplicationListView, ApplicationDetailView, InterviewListView, UpcomingInterviewsView, InterviewDetailView
 
 def welcome(request):
     return JsonResponse({
         "message": "Welcome to the Job Tracker API!",
         "status": "Online",
-        "documentation": "Endpoints available at /api/accounts/ and /api/jobs/"
+        "documentation": "Endpoints available at /api/accounts/ and /api/applications/"
     })
 
 def setup_admin(request):
@@ -32,6 +31,8 @@ urlpatterns = [
     path('', welcome, name='welcome'),
     path('setup-admin/', setup_admin),
     path('admin/', admin.site.urls),
+    
+    # Auth
     path('api/accounts/', include('accounts.urls')),
     path('api/token/', CustomTokenObtainPairView.as_view()),
     
@@ -39,23 +40,9 @@ urlpatterns = [
     path('api/api/accounts/', include('accounts.urls')),
     path('api/api/token/', CustomTokenObtainPairView.as_view()),
     
-    # Extension endpoints (original)
-    path('api/jobs/', include('jobs.urls')),
-
-    # Frontend endpoints (what React dashboard uses)
-    path('api/applications', ApplicationListView.as_view()),
-    path('api/applications/', ApplicationListView.as_view()),
-    path('api/applications/<int:pk>', ApplicationDetailView.as_view()),
-    path('api/applications/<int:pk>/', ApplicationDetailView.as_view()),
+    # ALL Job, Application, and Interview endpoints
+    path('api/', include('jobs.urls')),
     
-    # Keeping old paths just in case any other part of the frontend uses them
-    path('applications', ApplicationListView.as_view()),
-    path('applications/', ApplicationListView.as_view()),
-    path('applications/<int:pk>', ApplicationDetailView.as_view()),
-    path('applications/<int:pk>/', ApplicationDetailView.as_view()),
-
-    # Interview endpoints
-    path('api/interviews/', InterviewListView.as_view()),
-    path('api/interviews/upcoming/', UpcomingInterviewsView.as_view()),
-    path('api/interviews/<int:pk>/', InterviewDetailView.as_view()),
+    # Old legacy paths (for backward compatibility if needed)
+    path('applications/', include('jobs.urls')), 
 ]

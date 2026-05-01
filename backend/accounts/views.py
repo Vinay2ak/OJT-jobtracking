@@ -126,7 +126,22 @@ class VerifyOTPView(APIView):
         otp_obj = OTP.objects.filter(email=email).last()
         if otp_obj and not otp_obj.is_expired() and otp_obj.otp == otp:
             otp_obj.delete()
-            return Response({"message": "Email verified"}, status=200)
+            
+            # Generate tokens for the user
+            try:
+                user = User.objects.get(email=email)
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    "message": "Email verified",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "token": str(refresh.access_token), # Add token key for frontend compatibility
+                    "username": user.username,
+                    "email": user.email
+                }, status=200)
+            except User.DoesNotExist:
+                return Response({"message": "Email verified"}, status=200)
+                
         return Response({"error": "Invalid or expired OTP"}, status=400)
 
 
