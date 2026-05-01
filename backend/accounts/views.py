@@ -163,6 +163,7 @@ class LoginWithOTPView(APIView):
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
+            "token": str(refresh.access_token), # Added for frontend compatibility
             "username": user.username,
             "email": user.email
         }, status=200)
@@ -225,6 +226,7 @@ class GoogleLoginView(APIView):
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),
+            "token": str(refresh.access_token), # Added for frontend compatibility
             "user": {
                 "id": user.id,
                 "email": user.email,
