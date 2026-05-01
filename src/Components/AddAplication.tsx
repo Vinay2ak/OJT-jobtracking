@@ -1,4 +1,4 @@
-import { X, CheckCircle, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { JobApplication, ApplicationFormData } from '../types/application';
 import { apiClient } from '../services/api';
@@ -18,20 +18,13 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
     company: '',
     role: '',
     status: 'Applied',
+    emailConsent: false,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ApplicationFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  
-  // Post-submit states
   const [success, setSuccess] = useState(false);
-  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
-  
-  // Gmail integration states
-  const [isConnectingGmail, setIsConnectingGmail] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [extractedInfo, setExtractedInfo] = useState<{ interviewDate?: string; meetingLink?: string; company?: string; role?: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,8 +36,8 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
           company: application.company,
           role: application.role,
           status: application.status,
+          emailConsent: application.emailConsent ?? false,
         });
-        setCreatedJobId(application.id);
       } else {
         setFormData({
           fullName: '',
@@ -53,15 +46,12 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
           company: '',
           role: '',
           status: 'Applied',
+          emailConsent: false,
         });
-        setCreatedJobId(null);
       }
       setErrors({});
       setSubmitError('');
       setSuccess(false);
-      setExtractedInfo(null);
-      setIsConnectingGmail(false);
-      setIsScanning(false);
     }
   }, [application, isOpen]);
 
@@ -81,8 +71,9 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: newValue }));
     if (errors[name as keyof ApplicationFormData]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -99,77 +90,16 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
       if (application) {
         const updated = await apiClient.updateJob(application.id, formData);
         onSubmit(updated);
-        onClose(); // Close on edit
+        onClose();
       } else {
         const created = await apiClient.createJob(formData);
         onSubmit(created);
-        setCreatedJobId(created.id);
         setSuccess(true);
       }
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to save application.');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleConnectGmail = async () => {
-    setIsConnectingGmail(true);
-    try {
-      // Typically, this would redirect to Google OAuth. 
-      // For this implementation, we will simulate the flow by calling the scan API directly 
-      // or opening the OAuth window.
-      // Assuming apiClient.connectGmail() returns an auth URL or handles it.
-      await apiClient.connectGmail();
-      
-      // Simulate OAuth return and scan
-      setIsScanning(true);
-      const res = await apiClient.scanEmails();
-      // Suppose the response gives extracted data
-      if (res.extracted) {
-        setExtractedInfo(res.extracted);
-      } else {
-        // Mock data for demonstration if backend doesn't return anything yet
-        setTimeout(() => {
-          setExtractedInfo({
-            interviewDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-            meetingLink: 'https://zoom.us/j/mocking123',
-            company: formData.company,
-            role: formData.role
-          });
-          setIsScanning(false);
-        }, 2000);
-        return;
-      }
-    } catch (err) {
-      console.error(err);
-      // Fallback mock for the demo if endpoint fails
-      setTimeout(() => {
-        setExtractedInfo({
-          interviewDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-          meetingLink: 'https://zoom.us/j/mocking123',
-          company: formData.company,
-          role: formData.role
-        });
-        setIsScanning(false);
-      }, 1500);
-    } finally {
-      setIsConnectingGmail(false);
-    }
-  };
-
-  const handleAddExtractedInfo = async () => {
-    if (!createdJobId || !extractedInfo) return;
-    try {
-      const updated = await apiClient.updateJob(createdJobId, {
-        interviewDate: extractedInfo.interviewDate,
-        meetingLink: extractedInfo.meetingLink,
-      });
-      onSubmit(updated); // Update the list with the new data
-      onClose(); // finally close the modal
-    } catch (err) {
-      console.error(err);
-      onClose();
     }
   };
 
@@ -203,6 +133,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                 </div>
               )}
               
+              {/* Full Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
                 <input
@@ -216,6 +147,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                 {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
               </div>
 
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
                 <input
@@ -229,6 +161,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
+              {/* Company & Role */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company *</label>
@@ -256,6 +189,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                 </div>
               </div>
 
+              {/* Platform & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platform</label>
@@ -285,85 +219,45 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                   </select>
                 </div>
               </div>
+
+              {/* Email Consent Checkbox */}
+              <div className="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+                <input
+                  type="checkbox"
+                  id="emailConsent"
+                  name="emailConsent"
+                  checked={formData.emailConsent}
+                  onChange={handleChange}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="emailConsent" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none leading-snug">
+                  Do you give permission to scan your Gmail for interview updates regarding this job?
+                </label>
+              </div>
             </form>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center py-6 space-y-6">
-              {!extractedInfo ? (
-                <>
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Job Application Logged!</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                      We've successfully saved your application to {formData.company}.
-                    </p>
-                  </div>
-
-                  <div className="w-full bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-5 mt-4">
-                    <Mail className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Extract Interview Details?</h4>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                      Connect your Gmail to automatically fetch interview dates and meeting links for this job.
-                    </p>
-                    <button
-                      onClick={handleConnectGmail}
-                      disabled={isConnectingGmail || isScanning}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70"
-                    >
-                      {(isConnectingGmail || isScanning) && <Loader2 className="w-4 h-4 animate-spin" />}
-                      {isScanning ? 'Scanning Emails...' : 'Connect Gmail to fetch details'}
-                    </button>
-                  </div>
-                  
-                  <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm mt-4 transition-colors">
-                    Skip for now
-                  </button>
-                </>
-              ) : (
-                <div className="w-full text-left">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Interview Details Found!</h3>
-                  <div className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 mb-6 space-y-3">
-                    <p className="text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">Company:</span>{' '}
-                      <strong className="text-gray-900 dark:text-white">{extractedInfo.company}</strong>
-                    </p>
-                    <p className="text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">Role:</span>{' '}
-                      <strong className="text-gray-900 dark:text-white">{extractedInfo.role}</strong>
-                    </p>
-                    <p className="text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">Date:</span>{' '}
-                      <strong className="text-gray-900 dark:text-white">
-                        {extractedInfo.interviewDate ? new Date(extractedInfo.interviewDate).toLocaleString() : 'N/A'}
-                      </strong>
-                    </p>
-                    {extractedInfo.meetingLink && (
-                      <p className="text-sm truncate">
-                        <span className="text-gray-500 dark:text-gray-400">Link:</span>{' '}
-                        <a href={extractedInfo.meetingLink} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                          {extractedInfo.meetingLink}
-                        </a>
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleAddExtractedInfo}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors"
-                    >
-                      Add to this job
-                    </button>
-                    <button
-                      onClick={onClose}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-900 dark:text-white py-2.5 rounded-lg font-medium transition-colors"
-                    >
-                      Ignore
-                    </button>
-                  </div>
-                </div>
-              )}
+            /* Success Screen */
+            <div className="flex flex-col items-center justify-center text-center py-8 space-y-4">
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Job Application Logged!</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  Your application to <strong>{formData.company}</strong> for <strong>{formData.role}</strong> has been saved.
+                </p>
+                {formData.emailConsent && (
+                  <p className="text-blue-600 dark:text-blue-400 text-sm mt-2">
+                    ✉️ Gmail scanning permission granted — we'll check for interview updates.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="mt-4 px-6 py-2.5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                Done
+              </button>
             </div>
           )}
         </div>
@@ -385,7 +279,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
               className="px-5 py-2.5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-70"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {application ? 'Save Changes' : 'Submit Application'}
+              {application ? 'Save Changes' : 'Add Application'}
             </button>
           </div>
         )}

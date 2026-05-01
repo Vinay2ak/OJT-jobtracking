@@ -9,6 +9,7 @@ export const mockApplications: JobApplication[] = [
     company: 'TechCorp',
     role: 'Senior Frontend Developer',
     status: 'Interview',
+    emailConsent: false,
     interviewDate: '2026-02-15T10:00:00Z',
     meetingLink: 'https://zoom.us/j/123456789'
   },
@@ -19,7 +20,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'Naukri',
     company: 'StartupXYZ',
     role: 'Full Stack Engineer',
-    status: 'Applied'
+    status: 'Applied',
+    emailConsent: false
   },
   {
     id: '3',
@@ -28,7 +30,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'Other',
     company: 'BigTech Inc',
     role: 'Software Engineer III',
-    status: 'Offer'
+    status: 'Offer',
+    emailConsent: false
   },
   {
     id: '4',
@@ -37,7 +40,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'LinkedIn',
     company: 'FinanceHub',
     role: 'Frontend Developer',
-    status: 'Rejected'
+    status: 'Rejected',
+    emailConsent: false
   },
   {
     id: '5',
@@ -46,7 +50,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'Other',
     company: 'DataStream',
     role: 'React Developer',
-    status: 'Interview'
+    status: 'Interview',
+    emailConsent: true
   },
   {
     id: '6',
@@ -55,7 +60,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'LinkedIn',
     company: 'CloudSystems',
     role: 'UI/UX Engineer',
-    status: 'Applied'
+    status: 'Applied',
+    emailConsent: false
   },
   {
     id: '7',
@@ -64,7 +70,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'Naukri',
     company: 'InnovateLabs',
     role: 'Lead Frontend Developer',
-    status: 'Interview'
+    status: 'Interview',
+    emailConsent: true
   },
   {
     id: '8',
@@ -73,7 +80,8 @@ export const mockApplications: JobApplication[] = [
     platform: 'Other',
     company: 'MediaCo',
     role: 'JavaScript Developer',
-    status: 'Applied'
+    status: 'Applied',
+    emailConsent: false
   }
 ];
 

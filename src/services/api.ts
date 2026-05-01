@@ -91,13 +91,22 @@ export const apiClient = {
 
   async createJob(data: any) {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/jobs/`, {
+    // Map frontend field names to backend field names
+    const payload = {
+      applicantName: data.fullName,
+      applicantEmail: data.email,
+      company: data.company,
+      position: data.role,
+      platform: data.platform,
+      emailConsent: data.emailConsent ?? false,
+    };
+    const response = await fetch(`${API_BASE_URL}/api/applications/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error("Failed to create job application");
     return response.json();

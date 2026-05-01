@@ -6,6 +6,7 @@ export interface JobApplication {
   company: string;
   role: string;
   status: 'Applied' | 'Interview' | 'Rejected' | 'Offer';
+  emailConsent: boolean;
   interviewDate?: string;
   meetingLink?: string;
 }
@@ -17,4 +18,5 @@ export interface ApplicationFormData {
   company: string;
   role: string;
   status: 'Applied' | 'Interview' | 'Rejected' | 'Offer';
+  emailConsent: boolean;
 }
