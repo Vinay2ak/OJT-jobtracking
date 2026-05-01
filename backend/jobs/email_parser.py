@@ -54,7 +54,7 @@ def is_valid_status_transition(current_status, new_status):
     return new_rank > current_rank
 
 
-def get_gemini_classification(email_subject, email_body, company_name, role_name, sender_email=''):
+def get_gemini_classification(email_subject, email_body, company_name, role_name, sender_email='', job_platform=''):
     """Use Gemini AI to classify an email as interview/offer/rejection/none."""
     if not settings.GEMINI_API_KEY:
         print("GEMINI_API_KEY not set, falling back to keyword matching", flush=True)
@@ -66,6 +66,7 @@ You MUST verify the email is ACTUALLY about a specific job application before cl
 CONTEXT:
 - The user applied at company: "{company_name}"
 - For the role: "{role_name}"
+- Platform applied on: "{job_platform}"
 - Sender email: {sender_email}
 
 EMAIL TO ANALYZE:
@@ -313,10 +314,11 @@ def scan_user_emails(user):
 
     access_token = gmail_conn.access_token
 
-    # Only scan jobs that can still receive updates
+    # Only scan jobs that can still receive updates and have email_consent=True
     jobs = Job.objects.filter(
         user=user,
-        status__in=['applied', 'viewed', 'interviewing', 'interview']
+        status__in=['applied', 'viewed', 'interviewing', 'interview'],
+        email_consent=True
     )
     updates = []
     emails_scanned = 0
@@ -356,7 +358,7 @@ def scan_user_emails(user):
             print(f"    Analyzing email: '{subject}' from {sender}", flush=True)
 
             # Classify with AI
-            result = get_gemini_classification(subject, body, job.company, job.role, sender)
+            result = get_gemini_classification(subject, body, job.company, job.role, sender, job.platform)
 
             # STRICT: Require confidence >= 0.7 for any status change
             confidence = result.get('confidence', 0)

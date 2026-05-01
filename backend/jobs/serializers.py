@@ -19,13 +19,19 @@ class ApplicationSerializer(serializers.ModelSerializer):
     contactPerson = serializers.CharField(source='contact_person', required=False, allow_blank=True, allow_null=True)
     contactEmail = serializers.EmailField(source='contact_email', required=False, allow_blank=True, allow_null=True)
     followUp = serializers.BooleanField(source='follow_up', required=False, default=False)
+    
+    # New fields for frontend application form
+    applicantName = serializers.CharField(source='applicant_name', required=False, allow_blank=True)
+    applicantEmail = serializers.EmailField(source='applicant_email', required=False, allow_blank=True)
+    emailConsent = serializers.BooleanField(source='email_consent', required=False, default=False)
 
     class Meta:
         model = Job
         fields = [
             'id', 'company', 'position', 'status', 'location', 'salary',
             'appliedDate', 'lastUpdate', 'notes', 'contactPerson',
-            'contactEmail', 'jobUrl', 'followUp'
+            'contactEmail', 'jobUrl', 'followUp', 'platform',
+            'applicantName', 'applicantEmail', 'emailConsent'
         ]
         read_only_fields = ['id', 'appliedDate', 'lastUpdate']
 

@@ -92,8 +92,12 @@ def parse_status_from_text(text):
 def sync_jobs_with_gmail(user):
     """Searches for updates for all 'Applied' jobs for a specific user."""
     service = get_gmail_service()
-    # Get all jobs that are currently in 'applied' or 'viewed' status
-    jobs_to_track = Job.objects.filter(user=user, status__in=['applied', 'viewed'])
+    # Get all jobs that are currently in 'applied' or 'viewed' status and have email consent
+    jobs_to_track = Job.objects.filter(
+        user=user,
+        status__in=['applied', 'viewed'],
+        email_consent=True
+    )
     
     updated_count = 0
     results = []

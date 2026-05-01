@@ -29,6 +29,12 @@ class Job(models.Model):
     contact_person = models.CharField(max_length=255, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
     follow_up = models.BooleanField(default=False)
+    
+    # New fields for frontend application form
+    applicant_name = models.CharField(max_length=255, blank=True, default='')
+    applicant_email = models.EmailField(blank=True, default='')
+    email_consent = models.BooleanField(default=False)
+    
     applied_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
