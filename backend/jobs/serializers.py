@@ -35,6 +35,28 @@ class ApplicationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'appliedDate', 'lastUpdate']
 
+    def to_internal_value(self, data):
+        """Map alternative frontend payload keys to serializer fields."""
+        mutable_data = data.copy() if hasattr(data, 'copy') else data
+        
+        # Map frontend 'fullName' to 'applicantName'
+        if 'fullName' in mutable_data and 'applicantName' not in mutable_data:
+            mutable_data['applicantName'] = mutable_data.pop('fullName')
+            
+        # Map frontend 'email' to 'applicantEmail'
+        if 'email' in mutable_data and 'applicantEmail' not in mutable_data:
+            mutable_data['applicantEmail'] = mutable_data.pop('email')
+            
+        # Map frontend 'role' to 'position' (which maps to source='role')
+        if 'role' in mutable_data and 'position' not in mutable_data:
+            mutable_data['position'] = mutable_data.pop('role')
+            
+        # Map consent variations
+        if 'permission' in mutable_data and 'emailConsent' not in mutable_data:
+            mutable_data['emailConsent'] = mutable_data.pop('permission')
+            
+        return super().to_internal_value(mutable_data)
+
     def validate_status(self, value):
         """Accept both frontend and legacy status values."""
         status_map = {

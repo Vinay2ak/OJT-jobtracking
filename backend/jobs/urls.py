@@ -4,6 +4,7 @@ from .views import (
     JobView, JobDetailView, JobStatusUpdateView, ExtensionJobView,
     ExtensionSyncJobsView, GmailSyncView, DashboardView,
     # New endpoints
+    ApplicationListView, ApplicationDetailView,
     InterviewListView, UpcomingInterviewsView, InterviewDetailView,
     EmailScanView,
 )
@@ -20,4 +21,8 @@ urlpatterns = [
 
     # Email parsing
     path('scan-emails/', EmailScanView.as_view()),
+
+    # Frontend routes
+    path('applications/', ApplicationListView.as_view()),
+    path('applications/<int:pk>/', ApplicationDetailView.as_view()),
 ]

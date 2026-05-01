@@ -43,6 +43,12 @@ urlpatterns = [
     path('api/jobs/', include('jobs.urls')),
 
     # Frontend endpoints (what React dashboard uses)
+    path('api/applications', ApplicationListView.as_view()),
+    path('api/applications/', ApplicationListView.as_view()),
+    path('api/applications/<int:pk>', ApplicationDetailView.as_view()),
+    path('api/applications/<int:pk>/', ApplicationDetailView.as_view()),
+    
+    # Keeping old paths just in case any other part of the frontend uses them
     path('applications', ApplicationListView.as_view()),
     path('applications/', ApplicationListView.as_view()),
     path('applications/<int:pk>', ApplicationDetailView.as_view()),
