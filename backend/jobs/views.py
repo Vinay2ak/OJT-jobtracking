@@ -44,6 +44,13 @@ class ApplicationListView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        # DEBUG: Log authentication info
+        print(f"DEBUG: POST /applications/ from user: {request.user}", flush=True)
+        print(f"DEBUG: Auth Header: {request.headers.get('Authorization', 'MISSING')[:20]}...", flush=True)
+        
+        if not request.user.is_authenticated:
+            return Response({"error": "You must be logged in to create an application."}, status=status.HTTP_401_UNAUTHORIZED)
+            
         serializer = ApplicationSerializer(data=request.data)
         if serializer.is_valid():
             job = serializer.save(user=request.user, source='manual')
