@@ -1,29 +1,20 @@
 export interface JobApplication {
   id: string;
+  fullName: string;
+  email: string;
+  platform: 'LinkedIn' | 'Naukri' | 'Other';
   company: string;
-  position: string;
-  status: 'applied' | 'interviewing' | 'offered' | 'rejected' | 'accepted';
-  location: string;
-  salary?: string;
-  appliedDate: string;
-  lastUpdate: string;
-  notes?: string;
-  contactPerson?: string;
-  contactEmail?: string;
-  jobUrl?: string;
-  followUp?: boolean;
+  role: string;
+  status: 'Applied' | 'Interview' | 'Rejected' | 'Offer';
+  interviewDate?: string;
+  meetingLink?: string;
 }
 
 export interface ApplicationFormData {
+  fullName: string;
+  email: string;
+  platform: 'LinkedIn' | 'Naukri' | 'Other';
   company: string;
-  position: string;
-  status: 'applied' | 'interviewing' | 'offered' | 'rejected' | 'accepted';
-  location: string;
-  salary?: string;
-  appliedDate: string;
-  notes?: string;
-  contactPerson?: string;
-  contactEmail?: string;
-  jobUrl?: string;
-  followUp?: boolean;
+  role: string;
+  status: 'Applied' | 'Interview' | 'Rejected' | 'Offer';
 }

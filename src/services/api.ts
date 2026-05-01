@@ -82,16 +82,16 @@ export const apiClient = {
   // Job applications
   async getApplications(userId: string) {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/applications?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/jobs/?userId=${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new Error("Failed to fetch applications");
     return response.json();
   },
 
-  async createApplication(data: any) {
+  async createJob(data: any) {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/applications`, {
+    const response = await fetch(`${API_BASE_URL}/api/jobs/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,27 +99,27 @@ export const apiClient = {
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to create application");
+    if (!response.ok) throw new Error("Failed to create job application");
     return response.json();
   },
 
-  async updateApplication(id: string, data: any) {
+  async updateJob(id: string, data: any) {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/applications/${id}`, {
-      method: "PUT",
+    const response = await fetch(`${API_BASE_URL}/api/jobs/${id}/`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to update application");
+    if (!response.ok) throw new Error("Failed to update job application");
     return response.json();
   },
 
   async deleteApplication(id: string) {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/applications/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/jobs/${id}/`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

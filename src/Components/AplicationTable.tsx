@@ -1,4 +1,4 @@
-import { MoreVertical, Edit2, Trash2, ExternalLink, Star } from 'lucide-react';
+import { MoreVertical, Edit2, Trash2, ExternalLink } from 'lucide-react';
 import type { JobApplication } from '../types/application';
 import { useState } from 'react';
 
@@ -7,30 +7,28 @@ interface ApplicationTableProps {
   compact?: boolean;
   onEdit?: (application: JobApplication) => void;
   onDelete?: (id: string) => void;
-  onToggleFollowUp?: (id: string) => void;
 }
 
-export function ApplicationTable({ applications, compact, onEdit, onDelete, onToggleFollowUp }: ApplicationTableProps) {
+export function ApplicationTable({ applications, compact, onEdit, onDelete }: ApplicationTableProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'applied':
         return 'bg-blue-100 text-blue-700';
-      case 'interviewing':
+      case 'interview':
         return 'bg-yellow-100 text-yellow-700';
-      case 'offered':
+      case 'offer':
         return 'bg-green-100 text-green-700';
       case 'rejected':
         return 'bg-red-100 text-red-700';
-      case 'accepted':
-        return 'bg-purple-100 text-purple-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
@@ -44,7 +42,7 @@ export function ApplicationTable({ applications, compact, onEdit, onDelete, onTo
               Company
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Position
+              Role
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
@@ -52,18 +50,15 @@ export function ApplicationTable({ applications, compact, onEdit, onDelete, onTo
             {!compact && (
               <>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
+                  Platform
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Salary
+                  Applicant Email
                 </th>
               </>
             )}
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Applied Date
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Last Update
+              Interview Date
             </th>
             {!compact && (
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -76,40 +71,28 @@ export function ApplicationTable({ applications, compact, onEdit, onDelete, onTo
           {applications.map((app) => (
             <tr key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center gap-3">
-                  <button
-                    title={app.followUp ? 'Unmark follow-up' : 'Mark for follow-up'}
-                    onClick={() => onToggleFollowUp?.(app.id)}
-                    className={`p-1 rounded ${app.followUp ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400 dark:text-gray-400 dark:hover:text-yellow-400'}`}
-                  >
-                    <Star className="w-5 h-5" />
-                  </button>
-                  <div className="font-medium text-gray-900 dark:text-gray-100">{app.company}</div>
-                </div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">{app.company}</div>
               </td>
               <td className="px-6 py-4">
-                <div className="text-gray-900 dark:text-gray-100">{app.position}</div>
+                <div className="text-gray-900 dark:text-gray-100">{app.role}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(app.status)} dark:bg-opacity-20 dark:text-gray-200`}>
-                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                  {app.status}
                 </span>
               </td>
               {!compact && (
                 <>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                    {app.location}
+                    {app.platform}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                    {app.salary || '-'}
+                    {app.email}
                   </td>
                 </>
               )}
               <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                {formatDate(app.appliedDate)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                {formatDate(app.lastUpdate)}
+                {formatDate(app.interviewDate)}
               </td>
               {!compact && (
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -138,27 +121,17 @@ export function ApplicationTable({ applications, compact, onEdit, onDelete, onTo
                             <Edit2 className="w-4 h-4" />
                             Edit
                           </button>
-                          {app.jobUrl && (
+                          {app.meetingLink && (
                             <a
-                              href={app.jobUrl}
+                              href={app.meetingLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 flex items-center gap-2"
                             >
                               <ExternalLink className="w-4 h-4" />
-                              View Job
+                              Join Meeting
                             </a>
                           )}
-                          <button
-                            onClick={() => {
-                              onToggleFollowUp?.(app.id);
-                              setActiveMenu(null);
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                          >
-                            <Star className="w-4 h-4" />
-                            {app.followUp ? 'Unmark Follow-up' : 'Mark for Follow-up'}
-                          </button>
                           <button
                             onClick={() => {
                               if (confirm('Are you sure you want to delete this application?')) {

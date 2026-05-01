@@ -8,18 +8,21 @@ import type { JobApplication } from '../types/application';
 
 export function Applications() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [editingApplication, setEditingApplication] = useState<JobApplication | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredApplications = applications.filter(app => {
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.location.toLowerCase().includes(searchQuery.toLowerCase());
+      app.company.toLowerCase().includes(query) ||
+      app.role.toLowerCase().includes(query) ||
+      app.fullName.toLowerCase().includes(query) ||
+      app.email.toLowerCase().includes(query) ||
+      app.platform.toLowerCase().includes(query);
 
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -38,13 +41,9 @@ export function Applications() {
     setApplications(applications.filter(app => app.id !== id));
   };
 
-  const toggleFollowUp = (id: string) => {
-    setApplications(applications.map(app => app.id === id ? { ...app, followUp: !app.followUp } : app));
-  };
-
   const exportCSV = (items: JobApplication[]) => {
     if (!items || items.length === 0) return;
-    const headers = ['id','company','position','status','location','salary','appliedDate','lastUpdate','followUp','contactPerson','contactEmail','jobUrl','notes'];
+    const headers = ['id','fullName','email','platform','company','role','status','interviewDate','meetingLink'];
     const rows = items.map(it => headers.map(h => {
       const v = it[h as keyof JobApplication];
       return v === undefined || v === null ? '' : String(v).replace(/"/g, '""');
@@ -69,8 +68,6 @@ export function Applications() {
     setEditingApplication(undefined);
   };
 
-
-
   return (
     <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
       {/* Track Job Section */}
@@ -91,15 +88,11 @@ export function Applications() {
           Enter your email to track your job applications
         </p>
         <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '500px' }}>
-          <input 
-            type="email" 
-            placeholder="Enter your email address" 
-            className="flex-1 rounded-lg border-none px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300"
-          />
-          <button 
-            className="rounded-lg bg-gray-900 text-white px-6 py-3 font-semibold hover:bg-gray-800 transition-colors"
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full rounded-lg bg-gray-900 text-white px-6 py-3 font-semibold hover:bg-gray-800 transition-colors"
           >
-            Track
+            Add New Application
           </button>
         </div>
       </div>
@@ -127,7 +120,7 @@ export function Applications() {
             }} />
             <input
               type="text"
-              placeholder="Search by company, position, or location..."
+              placeholder="Search by company, role, platform..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -165,29 +158,28 @@ export function Applications() {
                 backgroundColor: 'var(--bg-surface)'
               }}
             >
-              <option value="all">All Status</option>
-              <option value="applied">Applied</option>
-              <option value="interviewing">Interviewing</option>
-              <option value="offered">Offered</option>
-              <option value="rejected">Rejected</option>
-              <option value="accepted">Accepted</option>
+              <option value="All">All Status</option>
+              <option value="Applied">Applied</option>
+              <option value="Interview">Interview</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Offer">Offer</option>
             </select>
 
             {/* Preset buttons with small progress indicators */}
             <div style={{ marginLeft: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               {(() => {
                 const total = applications.length || 1;
-                const appliedCount = applications.filter(a => a.status === 'applied').length;
-                const interviewingCount = applications.filter(a => a.status === 'interviewing').length;
+                const appliedCount = applications.filter(a => a.status === 'Applied').length;
+                const interviewingCount = applications.filter(a => a.status === 'Interview').length;
                 const allPct = Math.round((filteredApplications.length / total) * 100);
                 const appliedPct = Math.round((appliedCount / total) * 100);
                 const interviewingPct = Math.round((interviewingCount / total) * 100);
 
                 return (
                   <>
-                    <FeatureButton label="All" onClick={() => { setStatusFilter('all'); setSearchQuery(''); }} progress={allPct} title={`Showing ${filteredApplications.length} of ${applications.length}`} />
-                    <FeatureButton label="Applied" onClick={() => setStatusFilter('applied')} progress={appliedPct} title={`${appliedCount} applied`} />
-                    <FeatureButton label="Interviewing" onClick={() => setStatusFilter('interviewing')} progress={interviewingPct} title={`${interviewingCount} interviewing`} />
+                    <FeatureButton label="All" onClick={() => { setStatusFilter('All'); setSearchQuery(''); }} progress={allPct} title={`Showing ${filteredApplications.length} of ${applications.length}`} />
+                    <FeatureButton label="Applied" onClick={() => setStatusFilter('Applied')} progress={appliedPct} title={`${appliedCount} applied`} />
+                    <FeatureButton label="Interview" onClick={() => setStatusFilter('Interview')} progress={interviewingPct} title={`${interviewingCount} interviewing`} />
                   </>
                 );
               })()}
@@ -220,7 +212,6 @@ export function Applications() {
           applications={filteredApplications}
           onEdit={openEditModal}
           onDelete={handleDeleteApplication}
-          onToggleFollowUp={toggleFollowUp}
         />
       </div>
 

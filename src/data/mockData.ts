@@ -3,108 +3,77 @@ import type { JobApplication } from '../types/application';
 export const mockApplications: JobApplication[] = [
   {
     id: '1',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'LinkedIn',
     company: 'TechCorp',
-    position: 'Senior Frontend Developer',
-    status: 'interviewing',
-    location: 'San Francisco, CA',
-    salary: '$120k - $150k',
-    appliedDate: '2026-01-15',
-    lastUpdate: '2026-02-10',
-    notes: 'Second round interview scheduled',
-    contactPerson: 'Sarah Johnson',
-    contactEmail: 'sarah.j@techcorp.com',
-    jobUrl: 'https://techcorp.com/careers/frontend-dev'
-    ,followUp: false
+    role: 'Senior Frontend Developer',
+    status: 'Interview',
+    interviewDate: '2026-02-15T10:00:00Z',
+    meetingLink: 'https://zoom.us/j/123456789'
   },
   {
     id: '2',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'Naukri',
     company: 'StartupXYZ',
-    position: 'Full Stack Engineer',
-    status: 'applied',
-    location: 'Remote',
-    salary: '$100k - $130k',
-    appliedDate: '2026-02-01',
-    lastUpdate: '2026-02-01',
-    notes: 'Waiting for response',
-    jobUrl: 'https://startupxyz.com/jobs',
-    followUp: true
+    role: 'Full Stack Engineer',
+    status: 'Applied'
   },
   {
     id: '3',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'Other',
     company: 'BigTech Inc',
-    position: 'Software Engineer III',
-    status: 'offered',
-    location: 'Seattle, WA',
-    salary: '$140k - $170k',
-    appliedDate: '2026-01-05',
-    lastUpdate: '2026-02-08',
-    notes: 'Offer received! Need to respond by Feb 20',
-    contactPerson: 'Michael Chen',
-    contactEmail: 'm.chen@bigtech.com',
-    followUp: false
+    role: 'Software Engineer III',
+    status: 'Offer'
   },
   {
     id: '4',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'LinkedIn',
     company: 'FinanceHub',
-    position: 'Frontend Developer',
-    status: 'rejected',
-    location: 'New York, NY',
-    salary: '$110k - $135k',
-    appliedDate: '2026-01-20',
-    lastUpdate: '2026-01-28',
-    notes: 'Position filled internally',
-    followUp: false
+    role: 'Frontend Developer',
+    status: 'Rejected'
   },
   {
     id: '5',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'Other',
     company: 'DataStream',
-    position: 'React Developer',
-    status: 'interviewing',
-    location: 'Austin, TX',
-    salary: '$105k - $125k',
-    appliedDate: '2026-01-25',
-    lastUpdate: '2026-02-05',
-    notes: 'Technical assessment completed',
-    contactPerson: 'Emily Rodriguez',
-    contactEmail: 'emily.r@datastream.io',
-    followUp: true
+    role: 'React Developer',
+    status: 'Interview'
   },
   {
     id: '6',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'LinkedIn',
     company: 'CloudSystems',
-    position: 'UI/UX Engineer',
-    status: 'applied',
-    location: 'Boston, MA',
-    salary: '$115k - $140k',
-    appliedDate: '2026-02-05',
-    lastUpdate: '2026-02-05',
-    jobUrl: 'https://cloudsystems.com/careers',
-    followUp: false
+    role: 'UI/UX Engineer',
+    status: 'Applied'
   },
   {
     id: '7',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'Naukri',
     company: 'InnovateLabs',
-    position: 'Lead Frontend Developer',
-    status: 'interviewing',
-    location: 'Remote',
-    salary: '$130k - $160k',
-    appliedDate: '2026-01-18',
-    lastUpdate: '2026-02-11',
-    notes: 'Final round with CTO next week',
-    contactPerson: 'David Park',
-    contactEmail: 'david@innovatelabs.com',
-    followUp: false
+    role: 'Lead Frontend Developer',
+    status: 'Interview'
   },
   {
     id: '8',
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    platform: 'Other',
     company: 'MediaCo',
-    position: 'JavaScript Developer',
-    status: 'applied',
-    location: 'Los Angeles, CA',
-    salary: '$95k - $120k',
-    appliedDate: '2026-02-08',
-    lastUpdate: '2026-02-08',
-    followUp: false
+    role: 'JavaScript Developer',
+    status: 'Applied'
   }
 ];
 
