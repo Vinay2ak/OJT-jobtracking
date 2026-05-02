@@ -19,13 +19,24 @@ logger = logging.getLogger(__name__)
 # FRONTEND ENDPOINTS (/applications) — Used by React dashboard
 # ============================================================
 
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken
+
+class SafeJWTAuthentication(JWTAuthentication):
+    """Custom authentication that returns None instead of raising an exception on bad tokens."""
+    def authenticate(self, request):
+        try:
+            return super().authenticate(request)
+        except (AuthenticationFailed, InvalidToken):
+            return None
+
 class ApplicationListView(APIView):
     """GET /applications — List user's jobs in frontend format.
        POST /applications — Create a new job application."""
     
-    # Disable ALL DRF authentication and permissions for this view
-    # to perfectly bypass any bad tokens from the frontend.
-    authentication_classes = []
+    # Use SafeJWTAuthentication so bad tokens don't crash the POST fallback,
+    # but valid tokens still correctly authenticate the user for GET requests.
+    authentication_classes = [SafeJWTAuthentication]
     permission_classes = []
 
     def get(self, request):
