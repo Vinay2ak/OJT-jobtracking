@@ -1,102 +1,90 @@
 // @ts-nocheck
-import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Search, Filter, Download } from 'lucide-react';
+import { ApplicationTable } from './AplicationTable.tsx';
+import { AddApplicationModal } from './AddAplication';
+import FeatureButton from './FeatureButton';
+import { apiClient } from '../services/api';
 
-export function AddApplicationModal({ isOpen, onClose, onSubmit, application }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    company: '',
-    position: '',
-    status: 'applied',
-    location: '',
-    salary: '',
-    appliedDate: new Date().toISOString().split('T')[0],
-    notes: '',
-    contactPerson: '',
-    contactEmail: '',
-    jobUrl: '',
-    followUp: false,
-  });
+export function Applications() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [applications, setApplications] = useState([]);
+  const [editingApplication, setEditingApplication] = useState(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (application) {
-      setFormData({
-        company: application.company || '',
-        position: application.position || '',
-        status: application.status || 'applied',
-        location: application.location || '',
-        salary: application.salary || '',
-        appliedDate: application.appliedDate || '',
-        notes: application.notes || '',
-        contactPerson: application.contactPerson || '',
-        contactEmail: application.contactEmail || '',
-        jobUrl: application.jobUrl || '',
-        followUp: application.followUp || false,
-      });
-    }
-  }, [application, isOpen]);
+    fetchData();
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
+  const fetchData = async () => {
     try {
-      await onSubmit({
-        ...application,
-        ...formData,
-        id: application?.id || Date.now().toString(),
-      });
-      onClose();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
+      const data = await apiClient.getApplications();
+      setApplications(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
+    finally { setIsLoading(false); }
   };
 
-  if (!isOpen) return null;
+  const filteredApplications = (applications || []).filter(app => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = (app.company || '').toLowerCase().includes(query) || (app.role || '').toLowerCase().includes(query);
+    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleAddApplication = async (newApp) => {
+    try {
+      await apiClient.createJob(newApp);
+      fetchData();
+      setIsModalOpen(false);
+    } catch (e) { alert("Save failed"); }
+  };
+
+  const handleEditApplication = async (updatedApp) => {
+    try {
+      await apiClient.updateJob(updatedApp.id, updatedApp);
+      fetchData();
+      setIsModalOpen(false);
+    } catch (e) { alert("Update failed"); }
+  };
+
+  const handleDeleteApplication = async (id) => {
+    if (!window.confirm("Delete this?")) return;
+    try {
+      await apiClient.deleteApplication(id);
+      fetchData();
+    } catch (e) { alert("Delete failed"); }
+  };
+
+  if (isLoading) return <div style={{padding: '50px', textAlign: 'center'}}>Syncing with Database...</div>;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">{application ? 'Edit' : 'Add'} Application</h2>
-          <button onClick={onClose}><X /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input 
-            className="w-full p-2 border rounded" 
-            placeholder="Company" 
-            value={formData.company} 
-            onChange={e => setFormData({...formData, company: e.target.value})} 
-            required 
-          />
-          <input 
-            className="w-full p-2 border rounded" 
-            placeholder="Position" 
-            value={formData.position} 
-            onChange={e => setFormData({...formData, position: e.target.value})} 
-            required 
-          />
-          <select 
-            className="w-full p-2 border rounded" 
-            value={formData.status} 
-            onChange={e => setFormData({...formData, status: e.target.value})}
-          >
-            <option value="applied">Applied</option>
-            <option value="interviewing">Interviewing</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {isSubmitting ? 'Saving...' : 'Submit'}
-          </button>
-        </form>
+    <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '40px', borderRadius: '12px', marginBottom: '30px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: 'bold' }}>Track Your Job</h2>
+        <button onClick={() => setIsModalOpen(true)} style={{ background: '#111', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+            Add New Application
+        </button>
       </div>
+
+      <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
+        <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+      </div>
+
+      <ApplicationTable
+        applications={filteredApplications}
+        onEdit={(app) => { setEditingApplication(app); setIsModalOpen(true); }}
+        onDelete={handleDeleteApplication}
+        onToggleFollowUp={(id) => {}} 
+      />
+
+      <AddApplicationModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingApplication(undefined); }}
+        onSubmit={editingApplication ? handleEditApplication : handleAddApplication}
+        application={editingApplication}
+      />
     </div>
   );
 }
