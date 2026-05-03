@@ -1,90 +1,218 @@
-// @ts-nocheck
+import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download } from 'lucide-react';
-import { ApplicationTable } from './AplicationTable.tsx';
-import { AddApplicationModal } from './AddAplication';
-import FeatureButton from './FeatureButton';
-import { apiClient } from '../services/api';
+import type { JobApplication, ApplicationFormData } from '../types/application';
 
-export function Applications() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [applications, setApplications] = useState([]);
-  const [editingApplication, setEditingApplication] = useState(undefined);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+interface AddApplicationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (application: JobApplication) => void;
+  application?: JobApplication;
+}
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const data = await apiClient.getApplications();
-      setApplications(Array.isArray(data) ? data : []);
-    } catch (e) { console.error(e); }
-    finally { setIsLoading(false); }
-  };
-
-  const filteredApplications = (applications || []).filter(app => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (app.company || '').toLowerCase().includes(query) || (app.role || '').toLowerCase().includes(query);
-    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
+export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: AddApplicationModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<ApplicationFormData>({
+    company: '',
+    position: '',
+    status: 'applied',
+    location: '',
+    salary: '',
+    appliedDate: new Date().toISOString().split('T')[0],
+    notes: '',
+    contactPerson: '',
+    contactEmail: '',
+    jobUrl: '',
+    followUp: false,
   });
 
-  const handleAddApplication = async (newApp) => {
+  useEffect(() => {
+    if (application) {
+      setFormData({
+        company: application.company,
+        position: application.position,
+        status: application.status,
+        location: application.location,
+        salary: application.salary || '',
+        appliedDate: application.appliedDate,
+        notes: application.notes || '',
+        contactPerson: application.contactPerson || '',
+        contactEmail: application.contactEmail || '',
+        jobUrl: application.jobUrl || '',
+        followUp: application.followUp || false,
+      });
+    } else {
+      setFormData({
+        company: '',
+        position: '',
+        status: 'applied',
+        location: '',
+        salary: '',
+        appliedDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        contactPerson: '',
+        contactEmail: '',
+        jobUrl: '',
+        followUp: false,
+      });
+    }
+  }, [application, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     try {
-      await apiClient.createJob(newApp);
-      fetchData();
-      setIsModalOpen(false);
-    } catch (e) { alert("Save failed"); }
+      const newApplication: JobApplication = {
+        id: application?.id || Date.now().toString(),
+        ...formData,
+        lastUpdate: new Date().toISOString().split('T')[0],
+      };
+
+      await onSubmit(newApplication);
+      onClose();
+    } catch (error) {
+      console.error("Submission failed", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditApplication = async (updatedApp) => {
-    try {
-      await apiClient.updateJob(updatedApp.id, updatedApp);
-      fetchData();
-      setIsModalOpen(false);
-    } catch (e) { alert("Update failed"); }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDeleteApplication = async (id) => {
-    if (!window.confirm("Delete this?")) return;
-    try {
-      await apiClient.deleteApplication(id);
-      fetchData();
-    } catch (e) { alert("Delete failed"); }
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked } as unknown as ApplicationFormData));
   };
 
-  if (isLoading) return <div style={{padding: '50px', textAlign: 'center'}}>Syncing with Database...</div>;
+  if (!isOpen) return null;
 
   return (
-    <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
-      <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '40px', borderRadius: '12px', marginBottom: '30px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: 'bold' }}>Track Your Job</h2>
-        <button onClick={() => setIsModalOpen(true)} style={{ background: '#111', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-            Add New Application
-        </button>
+    <div className="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-950 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-950">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            {application ? 'Edit Application' : 'Add New Application'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Company <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleChange}
+                  required
+                  className="input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Google"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="position" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Position <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="position"
+                  name="position"
+                  value={formData.position}
+                  onChange={handleChange}
+                  required
+                  className="input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Senior Developer"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Status <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  required
+                  className="input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="applied">Applied</option>
+                  <option value="interviewing">Interviewing</option>
+                  <option value="offered">Offered</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="accepted">Accepted</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                  className="input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Remote"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={4}
+                className="input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Add any details..."
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 surface">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+            >
+              {isSubmitting ? 'Saving...' : (application ? 'Update Application' : 'Add Application')}
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
-        <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
-      </div>
-
-      <ApplicationTable
-        applications={filteredApplications}
-        onEdit={(app) => { setEditingApplication(app); setIsModalOpen(true); }}
-        onDelete={handleDeleteApplication}
-        onToggleFollowUp={(id) => {}} 
-      />
-
-      <AddApplicationModal
-        isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingApplication(undefined); }}
-        onSubmit={editingApplication ? handleEditApplication : handleAddApplication}
-        application={editingApplication}
-      />
     </div>
   );
 }
