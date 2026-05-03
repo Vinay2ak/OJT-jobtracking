@@ -121,7 +121,8 @@ class ApplicationDetailView(APIView):
 
     def get_object(self, pk, user):
         try:
-            return Job.objects.get(pk=pk, user=user)
+            job = Job.objects.filter(pk=pk).first()
+            return job
         except Job.DoesNotExist:
             return None
 
