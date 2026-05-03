@@ -1,26 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Save, User, Lock } from 'lucide-react';
+import { Save, User, Lock, Mail, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
+import { apiClient } from '../services/api';
 export function Settings() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showSuccess, setShowSuccess] = useState(false);
-
-  // Gmail integration state removed
-
+  // Gmail integration states
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [checkingGmail, setCheckingGmail] = useState(true);
   // Split name into first/last
   const nameParts = (user?.name || '').trim().split(' ');
   const defaultFirst = nameParts[0] || '';
   const defaultLast = nameParts.slice(1).join(' ') || '';
-
   const [firstName, setFirstName] = useState(defaultFirst);
   const [lastName, setLastName] = useState(defaultLast);
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [codingLanguages, setCodingLanguages] = useState(user?.codingLanguages || '');
-
   // Update fields when user object loads
   useEffect(() => {
     if (user) {
@@ -29,7 +27,6 @@ export function Settings() {
       setLastName(parts.slice(1).join(' ') || '');
       setEmail(user.email || '');
       setCodingLanguages(user.codingLanguages || '');
-
       // Load saved profile extras from localStorage
       const saved = localStorage.getItem('profile_extras');
       if (saved) {
@@ -39,27 +36,39 @@ export function Settings() {
           setLocation(extras.location || '');
         } catch {}
       }
+      // Check Gmail connection status on load
+      apiClient.getGmailStatus()
+        .then((res) => {
+          setGmailConnected(res.is_connected);
+          setCheckingGmail(false);
+        })
+        .catch(() => {
+          setCheckingGmail(false);
+        });
     }
   }, [user]);
-
   // Derive initials for avatar
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 
     (user?.email?.charAt(0).toUpperCase() ?? '?');
-
   const handleSave = () => {
     // Save extras (phone, location) to localStorage since backend doesn't have these fields
     localStorage.setItem('profile_extras', JSON.stringify({ phone, location }));
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
   };
-
-
-
+  const handleDisconnectGmail = async () => {
+    try {
+      await apiClient.disconnectGmail();
+      setGmailConnected(false);
+    } catch (e) {
+      console.error("Failed to disconnect Gmail", e);
+    }
+  };
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
+    { id: 'integrations', label: 'Integrations', icon: Mail },
   ];
-
   return (
     <div className="space-y-6 p-6">
       {/* Success Message */}
@@ -69,19 +78,18 @@ export function Settings() {
           Settings saved successfully!
         </div>
       )}
-
       {/* Settings Container */}
       <div className="overflow-hidden rounded-lg border border-gray-200 surface dark:border-gray-700">
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-transparent">
-          <div className="flex gap-4 px-6">
+          <div className="flex gap-4 px-6 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 border-b-2 px-4 py-4 transition-colors ${
+                  className={`flex items-center gap-2 border-b-2 px-4 py-4 transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
@@ -94,7 +102,6 @@ export function Settings() {
             })}
           </div>
         </div>
-
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'profile' && (
@@ -102,7 +109,6 @@ export function Settings() {
               <div>
                 <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Profile Information</h3>
                 <div className="space-y-4">
-
                   {/* Avatar */}
                   <div className="flex items-center gap-4">
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-2xl font-semibold text-white select-none">
@@ -115,7 +121,6 @@ export function Settings() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">{email}</p>
                     </div>
                   </div>
-
                   {/* Name fields */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -143,7 +148,6 @@ export function Settings() {
                       />
                     </div>
                   </div>
-
                   {/* Email - read-only since it's the login identifier */}
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -156,7 +160,6 @@ export function Settings() {
                       className="input w-full rounded-lg border px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:border-gray-600 cursor-not-allowed"
                     />
                   </div>
-
                   {/* Coding Languages */}
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -170,7 +173,6 @@ export function Settings() {
                       placeholder="e.g. JavaScript, Python, Java"
                     />
                   </div>
-
                   {/* Phone */}
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -184,7 +186,6 @@ export function Settings() {
                       placeholder="+91 98765 43210"
                     />
                   </div>
-
                   {/* Location */}
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -198,12 +199,10 @@ export function Settings() {
                       placeholder="e.g. Bangalore, India"
                     />
                   </div>
-
                 </div>
               </div>
             </div>
           )}
-
           {activeTab === 'security' && (
             <div className="max-w-2xl space-y-6">
               <div>
@@ -241,7 +240,6 @@ export function Settings() {
                   </div>
                 </div>
               </div>
-
               <div>
                 <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Active Sessions</h3>
                 <div className="space-y-3">
@@ -258,19 +256,65 @@ export function Settings() {
               </div>
             </div>
           )}
-
-
-
-          {/* Save Button */}
-          <div className="mt-6 flex justify-end border-t border-gray-200 dark:border-gray-700 pt-6">
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700"
-            >
-              <Save className="h-4 w-4" />
-              Save Changes
-            </button>
-          </div>
+          {activeTab === 'integrations' && (
+            <div className="max-w-2xl space-y-6">
+              <div>
+                <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">App Integrations</h3>
+                
+                {/* Gmail Integration Card */}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
+                      <Mail className="w-5 h-5 text-red-500" />
+                      Gmail Parsing
+                      <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-black">AI Powered</span>
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                      Connect your Gmail account to allow the system to automatically scan your inbox for interview invites and offers, updating your job statuses completely live.
+                    </p>
+                  </div>
+                  
+                  <div className="flex-shrink-0">
+                    {checkingGmail ? (
+                      <div className="animate-pulse w-32 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                    ) : gmailConnected ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="flex items-center gap-1 text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-800">
+                          <CheckCircle className="w-4 h-4" /> Connected
+                        </span>
+                        <button 
+                          onClick={handleDisconnectGmail}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                        >
+                          Disconnect Account
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => apiClient.connectGmail()}
+                        className="flex items-center justify-center gap-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 px-5 py-2.5 rounded-lg font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm w-full md:w-auto"
+                      >
+                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+                        Sign in with Google
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Save Button (Only show on profile/security tabs) */}
+          {activeTab !== 'integrations' && (
+            <div className="mt-6 flex justify-end border-t border-gray-200 dark:border-gray-700 pt-6">
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700"
+              >
+                <Save className="h-4 w-4" />
+                Save Changes
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
