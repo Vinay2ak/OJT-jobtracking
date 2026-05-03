@@ -1,11 +1,7 @@
 // @ts-nocheck
 const API_BASE_URL = "https://ojt-jobtracking-1906.onrender.com";
 const getHeaders = () => {
-  // Automatically finds your token regardless of what name it was saved under
-  const token = localStorage.getItem("token") || 
-                localStorage.getItem("access_token") || 
-                localStorage.getItem("access");
-                
+  const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -17,14 +13,13 @@ export const apiClient = {
     if (!response.ok) return [];
     return response.json();
   },
+  
   async createJob(data: any) {
     const payload = {
       ...data,
-      // Ensure these are lowercase for the database
       role: (data.position || data.role || '').toLowerCase(),
       status: (data.status || 'applied').toLowerCase(),
       platform: (data.platform || 'manual').toLowerCase(),
-      // Ensure we send empty strings instead of undefined for optional fields
       location: data.location || '',
       salary: data.salary || '',
     };
@@ -36,13 +31,13 @@ export const apiClient = {
     
     if (!response.ok) {
       const errorData = await response.json();
-      // If it fails, we show the actual error from the server in the alert
       const errorMessage = JSON.stringify(errorData);
       console.error("Backend Error:", errorData);
       throw new Error(errorMessage);
     }
     return response.json();
   },
+  
   async updateJob(id: any, data: any) {
     const payload = {
       ...data,
@@ -57,6 +52,7 @@ export const apiClient = {
     });
     return response.json();
   },
+  
   async deleteApplication(id: any) {
     await fetch(`${API_BASE_URL}/api/applications/${id}/`, {
       method: "DELETE",
@@ -64,6 +60,7 @@ export const apiClient = {
     });
     return true;
   },
+  
   async getDashboardData() {
     const response = await fetch(`${API_BASE_URL}/api/jobs/dashboard/`, { headers: getHeaders() });
     if (!response.ok) return { stats: {} };
@@ -75,25 +72,15 @@ export const apiClient = {
   
   // 1. Get the Google Login URL to redirect the user
   async connectGmail() {
-    const token = localStorage.getItem("token") || 
-                  localStorage.getItem("access_token") || 
-                  localStorage.getItem("access");
-    
-    if (!token) {
-      alert("Authentication error: No login token found. Please log out and log back in.");
-      return;
-    }
     try {
+      // Use the exact same getHeaders() that works for your other API calls
       const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/connect/`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: getHeaders(),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        alert("Backend rejected the connection: " + (errorData.detail || "Invalid Token"));
+        const errorData = await response.json().catch(() => ({}));
+        alert("Backend Error: " + (errorData.detail || "Unauthorized. Please check your login."));
         return;
       }
       
@@ -106,26 +93,35 @@ export const apiClient = {
         alert("Error: Backend did not return a valid Google login URL.");
       }
     } catch(e) {
-      alert("Network Error: Could not reach the backend server to connect Gmail.");
+      alert("Network Error: Could not reach the backend server to connect Gmail. Please check your browser console.");
       console.error(e);
     }
   },
   
   // 2. Check if the user is currently connected
   async getGmailStatus() {
-    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/status/`, {
-      headers: getHeaders()
-    });
-    if (!response.ok) return { is_connected: false };
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/status/`, {
+        method: "GET",
+        headers: getHeaders()
+      });
+      if (!response.ok) return { is_connected: false };
+      return await response.json();
+    } catch(e) {
+      return { is_connected: false };
+    }
   },
   
   // 3. Disconnect Gmail
   async disconnectGmail() {
-    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/disconnect/`, {
-      method: "POST",
-      headers: getHeaders()
-    });
-    return response.ok;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/disconnect/`, {
+        method: "POST",
+        headers: getHeaders()
+      });
+      return response.ok;
+    } catch(e) {
+      return false;
+    }
   }
 };
