@@ -33,13 +33,21 @@ export function Applications() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddApplication = async (newApp) => {
-    try {
-      await apiClient.createJob(newApp);
-      fetchData();
-      setIsModalOpen(false);
-    } catch (e) { alert("Save failed"); }
-  };
+  // @ts-nocheck
+// ... inside your Applications component ...
+
+const handleAddApplication = async (newApp) => {
+  try {
+    await apiClient.createJob(newApp);
+    // 1. Refresh the list
+    await fetchData(); 
+    // 2. DO NOT call setIsModalOpen(false) here! 
+    // This allows the "Done" button to stay on screen.
+  } catch (error) {
+    alert("Failed to save job");
+  }
+};
+
 
   const handleEditApplication = async (updatedApp) => {
     try {
