@@ -36,17 +36,22 @@ export function Applications() {
   // @ts-nocheck
 // ... inside your Applications component ...
 
-const handleAddApplication = async (newApp) => {
+// @ts-nocheck
+const handleAddApplication = async (newApp: any) => {
   try {
+    // 1. Send to database
     await apiClient.createJob(newApp);
-    // 1. Refresh the list
+    
+    // 2. Refresh the table data
     await fetchData(); 
-    // 2. DO NOT call setIsModalOpen(false) here! 
-    // This allows the "Done" button to stay on screen.
+    
+    // NOTE: DO NOT call setIsModalOpen(false) here. 
+    // This allows the Modal to stay open and show the "Done" button.
   } catch (error) {
-    alert("Failed to save job");
+    console.error("Save failed", error);
   }
 };
+
 
 
   const handleEditApplication = async (updatedApp) => {
