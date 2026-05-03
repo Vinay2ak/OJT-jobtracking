@@ -63,13 +63,27 @@ const handleAddApplication = async (newApp: any) => {
     } catch (e) { alert("Update failed"); }
   };
 
-  const handleDeleteApplication = async (id) => {
-    if (!window.confirm("Delete this?")) return;
-    try {
-      await apiClient.deleteApplication(id);
-      fetchData();
-    } catch (e) { alert("Delete failed"); }
-  };
+  // @ts-nocheck
+const handleDeleteApplication = async (id: any) => {
+  // 1. Confirm before deleting
+  if (!window.confirm("Are you sure you want to delete this application?")) {
+    return;
+  }
+
+  try {
+    // 2. Call the API to delete from database
+    await apiClient.deleteApplication(id);
+    
+    // 3. Refresh the data from the backend to ensure it's gone
+    await fetchData();
+    
+    console.log("Application deleted successfully.");
+  } catch (error) {
+    console.error("Delete failed", error);
+    alert("Failed to delete application. Please try again.");
+  }
+};
+
 
   if (isLoading) return <div style={{padding: '50px', textAlign: 'center'}}>Syncing with Database...</div>;
 
