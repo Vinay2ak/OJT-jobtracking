@@ -1,7 +1,7 @@
 from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from django.utils import timezone
 from .models import Job, Interview, EmailScanLog
@@ -115,7 +115,8 @@ class ApplicationListView(APIView):
 
 class ApplicationDetailView(APIView):
     """GET/PUT/DELETE /applications/:id — Single application CRUD."""
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [SafeJWTAuthentication, SessionAuthentication]
+    permission_classes = [AllowAny]
 
     def get_object(self, pk, user):
         try:
