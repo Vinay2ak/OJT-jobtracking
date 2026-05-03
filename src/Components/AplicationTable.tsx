@@ -134,9 +134,9 @@ export function ApplicationTable({ applications, compact, onEdit, onDelete }: Ap
                           )}
                           <button
                             onClick={() => {
-                              if (confirm('Are you sure you want to delete this application?')) {
+                             
                                 onDelete?.(app.id);
-                              }
+                              
                               setActiveMenu(null);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 flex items-center gap-2"
