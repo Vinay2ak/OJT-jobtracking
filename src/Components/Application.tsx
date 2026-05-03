@@ -1,10 +1,10 @@
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react'; // Added useEffect
 import { Search, Filter, Download } from 'lucide-react';
 import { ApplicationTable } from './AplicationTable';
 import { AddApplicationModal } from './AddAplication';
 import FeatureButton from './FeatureButton';
 import type { JobApplication } from '../types/application';
+import { apiClient } from '../services/api'; // Import our new apiClient
 
 export function Applications() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,36 +12,72 @@ export function Applications() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [editingApplication, setEditingApplication] = useState<JobApplication | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. FETCH JOBS FROM BACKEND ON LOAD
+  useEffect(() => {
+    async function loadJobs() {
+      try {
+        const data = await apiClient.getApplications();
+        setApplications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load applications", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadJobs();
+  }, []);
 
   const filteredApplications = applications.filter(app => {
     const query = searchQuery.toLowerCase();
     const matchesSearch =
-      app.company.toLowerCase().includes(query) ||
-      app.role.toLowerCase().includes(query) ||
-      app.fullName.toLowerCase().includes(query) ||
-      app.email.toLowerCase().includes(query) ||
-      app.platform.toLowerCase().includes(query);
+      (app.company?.toLowerCase() || '').includes(query) ||
+      (app.role?.toLowerCase() || '').includes(query) ||
+      (app.fullName?.toLowerCase() || '').includes(query);
 
     const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddApplication = (newApp: JobApplication) => {
-    setApplications([newApp, ...applications]);
+  // 2. SAVE NEW JOB TO BACKEND
+  const handleAddApplication = async (newApp: any) => {
+    try {
+      const savedApp = await apiClient.createJob(newApp);
+      // Refresh list from backend to ensure data integrity
+      const updatedList = await apiClient.getApplications();
+      setApplications(updatedList);
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("Error saving job. Please check your internet connection.");
+    }
   };
 
-  const handleEditApplication = (updatedApp: JobApplication) => {
-    setApplications(applications.map(app =>
-      app.id === updatedApp.id ? updatedApp : app
-    ));
+  // 3. UPDATE JOB IN BACKEND
+  const handleEditApplication = async (updatedApp: any) => {
+    try {
+      await apiClient.updateJob(updatedApp.id, updatedApp);
+      const updatedList = await apiClient.getApplications();
+      setApplications(updatedList);
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("Failed to update application");
+    }
   };
 
-  const handleDeleteApplication = (id: string) => {
-    setApplications(applications.filter(app => app.id !== id));
+  // 4. DELETE FROM BACKEND
+  const handleDeleteApplication = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this application?")) return;
+    try {
+      await apiClient.deleteApplication(id);
+      setApplications(applications.filter(app => app.id !== id));
+    } catch (error) {
+      alert("Failed to delete application");
+    }
   };
 
   const exportCSV = (items: JobApplication[]) => {
+    // ... CSV logic stays the same ...
     if (!items || items.length === 0) return;
     const headers = ['id','fullName','email','platform','company','role','status','interviewDate','meetingLink'];
     const rows = items.map(it => headers.map(h => {
@@ -68,9 +104,13 @@ export function Applications() {
     setEditingApplication(undefined);
   };
 
+  if (isLoading) {
+    return <div className="p-10 text-center">Loading your applications...</div>;
+  }
+
   return (
     <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
-      {/* Track Job Section */}
+      {/* Header section remains the same */}
       <div style={{
         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
         color: 'white',
@@ -85,7 +125,7 @@ export function Applications() {
       }}>
         <h2 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: 'bold' }}>Track Your Job</h2>
         <p style={{ fontSize: '1.2rem', opacity: 0.9, marginBottom: '24px' }}>
-          Enter your email to track your job applications
+          Your applications are now synced with the database
         </p>
         <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '500px' }}>
           <button
@@ -97,7 +137,7 @@ export function Applications() {
         </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Filters, Table, and Modal logic now use the backend-synced state */}
       <div style={{
         backgroundColor: 'var(--bg-surface)',
         padding: '20px',
@@ -107,56 +147,23 @@ export function Applications() {
         marginBottom: '20px'
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Search */}
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              width: '20px',
-              height: '20px',
-              color: '#64748b',
-              transform: 'translateY(-50%)'
-            }} />
+            <Search style={{ position: 'absolute', left: '12px', top: '50%', width: '20px', height: '20px', color: '#64748b', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search by company, role, platform..."
+              placeholder="Search by company, role..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 12px 12px 44px',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#d1d5db';
-                e.target.style.boxShadow = 'none';
-              }}
+              style={{ width: '100%', padding: '12px 12px 12px 44px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
             />
           </div>
 
-          {/* Status Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Filter style={{ width: '20px', height: '20px', color: '#64748b' }} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontSize: '14px',
-                outline: 'none',
-                backgroundColor: 'var(--bg-surface)'
-              }}
+              style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', outline: 'none', backgroundColor: 'var(--bg-surface)' }}
             >
               <option value="All">All Status</option>
               <option value="Applied">Applied</option>
@@ -164,27 +171,7 @@ export function Applications() {
               <option value="Rejected">Rejected</option>
               <option value="Offer">Offer</option>
             </select>
-
-            {/* Preset buttons with small progress indicators */}
-            <div style={{ marginLeft: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-              {(() => {
-                const total = applications.length || 1;
-                const appliedCount = applications.filter(a => a.status === 'Applied').length;
-                const interviewingCount = applications.filter(a => a.status === 'Interview').length;
-                const allPct = Math.round((filteredApplications.length / total) * 100);
-                const appliedPct = Math.round((appliedCount / total) * 100);
-                const interviewingPct = Math.round((interviewingCount / total) * 100);
-
-                return (
-                  <>
-                    <FeatureButton label="All" onClick={() => { setStatusFilter('All'); setSearchQuery(''); }} progress={allPct} title={`Showing ${filteredApplications.length} of ${applications.length}`} />
-                    <FeatureButton label="Applied" onClick={() => setStatusFilter('Applied')} progress={appliedPct} title={`${appliedCount} applied`} />
-                    <FeatureButton label="Interview" onClick={() => setStatusFilter('Interview')} progress={interviewingPct} title={`${interviewingCount} interviewing`} />
-                  </>
-                );
-              })()}
-            </div>
-
+            
             {/* Export CSV */}
             <button onClick={() => exportCSV(filteredApplications)} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '8px 12px', borderRadius: 8 }}>
               <Download style={{ width: 16, height: 16 }} /> Export CSV
@@ -193,21 +180,13 @@ export function Applications() {
         </div>
       </div>
 
-      {/* Results Count */}
       <div style={{ marginBottom: '20px' }}>
         <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
-          Showing {filteredApplications.length} of {applications.length} applications
+          Showing {filteredApplications.length} of {applications.length} applications (Live from Database)
         </p>
       </div>
 
-      {/* Applications Table */}
-      <div style={{
-        backgroundColor: 'var(--bg-surface)',
-        borderRadius: '12px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-        border: '1px solid var(--border)',
-        overflow: 'hidden'
-      }}>
+      <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <ApplicationTable
           applications={filteredApplications}
           onEdit={openEditModal}
@@ -215,7 +194,6 @@ export function Applications() {
         />
       </div>
 
-      {/* Add/Edit Application Modal */}
       <AddApplicationModal
         isOpen={isModalOpen}
         onClose={closeModal}
