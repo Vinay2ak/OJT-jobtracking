@@ -163,8 +163,8 @@ class DashboardView(APIView):
         if not request.user or not request.user.is_authenticated:
             return Response({"error": "Authentication Failed"}, status=401)
             
-        # GUARANTEED FIX: Calculate dashboard stats using all jobs
-        jobs = Job.objects.all()
+        # Get only jobs belonging to this user
+        jobs = Job.objects.filter(user=request.user)
 
         total = jobs.count()
         applied = jobs.filter(status='applied').count()
