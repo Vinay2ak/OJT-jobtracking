@@ -1,7 +1,11 @@
 // @ts-nocheck
 const API_BASE_URL = "https://ojt-jobtracking-1906.onrender.com";
 const getHeaders = () => {
-  const token = localStorage.getItem("token");
+  // Automatically finds your token regardless of what name it was saved under
+  const token = localStorage.getItem("token") || 
+                localStorage.getItem("access_token") || 
+                localStorage.getItem("access");
+                
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -68,28 +72,45 @@ export const apiClient = {
   // ==========================================
   // GMAIL INTEGRATION ENDPOINTS
   // ==========================================
+  
   // 1. Get the Google Login URL to redirect the user
   async connectGmail() {
-    const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/connect/`, {
-      method: "GET",
-      headers: getHeaders(),
-    });
+    const token = localStorage.getItem("token") || 
+                  localStorage.getItem("access_token") || 
+                  localStorage.getItem("access");
     
-    // Most Django OAuth setups return the Google URL in JSON format, e.g., { url: "https://accounts.google.com/..." }
-    // If it redirects directly, the browser will follow it, or we handle the JSON response.
+    if (!token) {
+      alert("Authentication error: No login token found. Please log out and log back in.");
+      return;
+    }
     try {
+      const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/connect/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert("Backend rejected the connection: " + (errorData.detail || "Invalid Token"));
+        return;
+      }
+      
       const data = await response.json();
-      if (data.url || data.authorization_url) {
-        window.location.href = data.url || data.authorization_url;
+      
+      // Successfully got the Google URL from Django, now redirect the user!
+      if (data.auth_url || data.url || data.authorization_url) {
+        window.location.href = data.auth_url || data.url || data.authorization_url;
       } else {
-         // Fallback if backend expects a direct redirect
-         window.location.href = `${API_BASE_URL}/api/accounts/gmail/connect/?token=${localStorage.getItem("token")}`;
+        alert("Error: Backend did not return a valid Google login URL.");
       }
     } catch(e) {
-      // If backend redirects directly without JSON
-      window.location.href = `${API_BASE_URL}/api/accounts/gmail/connect/?token=${localStorage.getItem("token")}`;
+      alert("Network Error: Could not reach the backend server to connect Gmail.");
+      console.error(e);
     }
   },
+  
   // 2. Check if the user is currently connected
   async getGmailStatus() {
     const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/status/`, {
@@ -98,6 +119,7 @@ export const apiClient = {
     if (!response.ok) return { is_connected: false };
     return response.json();
   },
+  
   // 3. Disconnect Gmail
   async disconnectGmail() {
     const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/disconnect/`, {
