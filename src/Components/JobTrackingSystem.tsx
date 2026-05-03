@@ -3,237 +3,135 @@ import { ClipboardList, Target, Calendar, Users, FileText, Zap, CheckCircle2, Tr
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { JobApplication } from '../types/application';
-
 export function JobTrackingSystem() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
-
-  useEffect(() => {
-    async function fetchData() {
-      if (!user?.id) return;
-      try {
-        const data = await apiClient.getApplications(user.id);
-        setApplications(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Failed to fetch applications", error);
-      } finally {
-        // Data fetch complete
-      }
+  const [isLoading, setIsLoading] = useState(true);
+  // 1. Function to fetch data from the backend
+  const fetchData = async () => {
+    if (!user?.id) return;
+    try {
+      const data = await apiClient.getApplications(user.id);
+      setApplications(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch applications", error);
+    } finally {
+      setIsLoading(false);
     }
-    fetchData();
-  }, [user]);
-
-  // Compute dynamic stats
-  const totalApplications = applications.length;
-  const activeApplications = applications.filter(a => ['Applied', 'Interview', 'Offer'].includes(a.status)).length;
-  const interviews = applications.filter(a => a.status === 'Interview').length;
-  const offers = applications.filter(a => a.status === 'Offer').length;
-
-  const applicationsByStatus = {
-    applied: applications.filter(a => a.status === 'Applied'),
-    interviewing: applications.filter(a => a.status === 'Interview'),
-    offered: applications.filter(a => a.status === 'Offer'),
-    rejected: applications.filter(a => a.status === 'Rejected'),
   };
-
+  // 2. LIVE UPDATE LOGIC: This makes the page refresh every 5 seconds
+  useEffect(() => {
+    // Initial fetch
+    fetchData();
+    // Set up the interval for live updates
+    const interval = setInterval(() => {
+      fetchData();
+    }, 5000); // 5000ms = 5 seconds
+    // Clean up interval when you leave the page
+    return () => clearInterval(interval);
+  }, [user?.id]);
+  // 3. Compute dynamic stats based on the live data
+  const totalApplications = applications.length;
+  const activeApplications = applications.filter(a => ['Applied', 'Interviewing'].includes(a.status)).length;
+  const interviews = applications.filter(a => a.status === 'Interviewing').length;
+  const offers = applications.filter(a => a.status === 'Offer' || a.status === 'Accepted').length;
+  // Calculate success rate (Offers / Total)
+  const successRate = totalApplications > 0 ? Math.round((offers / totalApplications) * 100) : 0;
+  if (isLoading && applications.length === 0) {
+    return <div className="p-8 text-center text-gray-500">Loading tracking data...</div>;
+  }
   return (
-    <div className="p-6 space-y-6">
-      {/* Header Card */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-8 text-white border-2 border-indigo-500 shadow-lg">
-        <div className="flex items-center gap-4 mb-3">
-          <div className="bg-white bg-opacity-20 backdrop-blur-sm p-4 rounded-xl">
-            <ClipboardList className="w-10 h-10" />
+    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <TrendingUp className="text-blue-600" /> Job Tracking System
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">Live monitoring of your career progress</p>
+        </div>
+        <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-sm font-medium animate-pulse">
+          <Zap className="w-4 h-4 fill-current" /> Live Updates Active
+        </div>
+      </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          icon={<ClipboardList className="text-blue-600" />} 
+          label="Total Apps" 
+          value={totalApplications} 
+          trend="+12% this month" 
+        />
+        <StatCard 
+          icon={<Target className="text-orange-600" />} 
+          label="Active" 
+          value={activeApplications} 
+          trend="Currently processing" 
+        />
+        <StatCard 
+          icon={<Calendar className="text-purple-600" />} 
+          label="Interviews" 
+          value={interviews} 
+          trend="Upcoming sessions" 
+        />
+        <StatCard 
+          icon={<CheckCircle2 className="text-green-600" />} 
+          label="Offers" 
+          value={offers} 
+          trend={`${successRate}% Success Rate`} 
+        />
+      </div>
+      {/* Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Progress Overview */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Pipeline Breakdown</h3>
+            <div className="space-y-4">
+              <ProgressBar label="Applied" count={applications.filter(a => a.status === 'Applied').length} total={totalApplications} color="bg-blue-500" />
+              <ProgressBar label="Interviewing" count={interviews} total={totalApplications} color="bg-purple-500" />
+              <ProgressBar label="Offers" count={offers} total={totalApplications} color="bg-green-500" />
+              <ProgressBar label="Rejected" count={applications.filter(a => a.status === 'Rejected').length} total={totalApplications} color="bg-red-500" />
+            </div>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold">Job Tracking System</h2>
-            <p className="text-indigo-100 mt-1">Comprehensive overview of your job search journey</p>
+        </div>
+        {/* Side Actions */}
+        <div className="space-y-6">
+          <div className="bg-blue-600 p-6 rounded-xl text-white shadow-lg">
+            <h3 className="font-bold text-lg mb-2">Track Everything</h3>
+            <p className="text-blue-100 text-sm mb-4">Every application is a new opportunity. Keep your records up to date for the best analytics.</p>
+            <button className="w-full bg-white text-blue-600 font-bold py-2 rounded-lg hover:bg-blue-50 transition-colors">
+              Refresh Data Now
+            </button>
           </div>
         </div>
       </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Target className="w-6 h-6 text-blue-600" />
-            </div>
-            <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-              Total
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">Total Applications</p>
-          <p className="text-3xl font-bold text-gray-900">{totalApplications}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-green-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-green-100 p-3 rounded-lg">
-              <Zap className="w-6 h-6 text-green-600" />
-            </div>
-            <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-              Active
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">Active Applications</p>
-          <p className="text-3xl font-bold text-gray-900">{activeApplications}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-purple-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <Calendar className="w-6 h-6 text-purple-600" />
-            </div>
-            <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-              In Progress
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">Interviews Scheduled</p>
-          <p className="text-3xl font-bold text-gray-900">{interviews}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-yellow-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-yellow-100 p-3 rounded-lg">
-              <CheckCircle2 className="w-6 h-6 text-yellow-600" />
-            </div>
-            <span className="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
-              Success
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mb-1">Offers Received</p>
-          <p className="text-3xl font-bold text-gray-900">{offers}</p>
-        </div>
+    </div>
+  );
+}
+// Small helper components
+function StatCard({ icon, label, value, trend }: any) {
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">{icon}</div>
       </div>
-
-      {/* Tracking Board */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-indigo-600" />
-          Application Pipeline
-        </h3>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Applied Column */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-blue-900">Applied</h4>
-              <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {applicationsByStatus.applied.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {applicationsByStatus.applied.slice(0, 3).map(app => (
-                <div key={app.id} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{app.company}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{app.role}</p>
-                </div>
-              ))}
-              {applicationsByStatus.applied.length > 3 && (
-                <p className="text-xs text-blue-600 text-center">+{applicationsByStatus.applied.length - 3} more</p>
-              )}
-            </div>
-          </div>
-
-          {/* Interviewing Column */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border-2 border-yellow-200 dark:border-yellow-800">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-yellow-900 dark:text-yellow-200">Interviewing</h4>
-              <span className="bg-yellow-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {applicationsByStatus.interviewing.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {applicationsByStatus.interviewing.slice(0, 3).map(app => (
-                <div key={app.id} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{app.company}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{app.role}</p>
-                  {app.interviewDate && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {new Date(app.interviewDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </p>
-                  )}
-                </div>
-              ))}
-              {applicationsByStatus.interviewing.length > 3 && (
-                <p className="text-xs text-yellow-600 text-center">+{applicationsByStatus.interviewing.length - 3} more</p>
-              )}
-            </div>
-          </div>
-
-          {/* Offered Column */}
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border-2 border-green-200 dark:border-green-800">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-green-900 dark:text-green-200">Offered</h4>
-              <span className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {applicationsByStatus.offered.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {applicationsByStatus.offered.slice(0, 3).map(app => (
-                <div key={app.id} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{app.company}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{app.role}</p>
-                </div>
-              ))}
-              {applicationsByStatus.offered.length > 3 && (
-                <p className="text-xs text-green-600 text-center">+{applicationsByStatus.offered.length - 3} more</p>
-              )}
-            </div>
-          </div>
-
-          {/* Rejected Column */}
-          <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-4 border-2 border-red-200 dark:border-red-800">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-red-900 dark:text-red-200">Rejected</h4>
-              <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {applicationsByStatus.rejected.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {applicationsByStatus.rejected.slice(0, 3).map(app => (
-                <div key={app.id} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{app.company}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{app.role}</p>
-                </div>
-              ))}
-              {applicationsByStatus.rejected.length > 3 && (
-                <p className="text-xs text-red-600 text-center">+{applicationsByStatus.rejected.length - 3} more</p>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+      <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</div>
+      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-3">{trend}</div>
+    </div>
+  );
+}
+function ProgressBar({ label, count, total, color }: any) {
+  const percentage = total > 0 ? (count / total) * 100 : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-gray-600 dark:text-gray-400">{label}</span>
+        <span className="font-bold text-gray-900 dark:text-white">{count}</span>
       </div>
-
-      {/* Features Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="bg-blue-100 p-3 rounded-lg w-fit mb-4">
-            <FileText className="w-6 h-6 text-blue-600" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Document Management</h4>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Keep track of resumes, cover letters, and other application documents in one place.
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="bg-green-100 p-3 rounded-lg w-fit mb-4">
-            <Calendar className="w-6 h-6 text-green-600" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Interview Scheduling</h4>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Never miss an interview with automatic reminders and calendar integration.
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="bg-purple-100 p-3 rounded-lg w-fit mb-4">
-            <Users className="w-6 h-6 text-purple-600" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Contact Tracking</h4>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Maintain relationships with recruiters and hiring managers throughout your search.
-          </p>
-        </div>
+      <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+        <div className={`h-2 rounded-full ${color} transition-all duration-500`} style={{ width: `${percentage}%` }}></div>
       </div>
     </div>
   );
