@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ClipboardList, Target, Calendar, Users, FileText, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ClipboardList, Target, Calendar, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { JobApplication } from '../types/application';
@@ -7,40 +7,41 @@ export function JobTrackingSystem() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const fetchData = async () => {
-    // Try to find any ID available on the user object
-    const userId = user?.id || user?._id || (user as any)?.uid;
-    
-    if (!userId) {
-      // If we have a user object but no ID yet, wait a bit but stop the loading spinner
-      if (user) setIsLoading(false);
-      return;
-    }
+  // 1. Improved FETCH DATA: Removed the userId requirement
+  const fetchData = useCallback(async () => {
     try {
-      const data = await apiClient.getApplications(userId);
+      const data = await apiClient.getApplications();
       if (Array.isArray(data)) {
         setApplications(data);
       }
     } catch (error) {
       console.error("Tracking System Error:", error);
     } finally {
-      setIsLoading(false); // DEFINITELY stop loading here
+      setIsLoading(false);
     }
-  };
+  }, []);
   useEffect(() => {
-    // Initial fetch attempt
+    // Initial fetch
     fetchData();
-    // LIVE UPDATE: Refresh every 5 seconds
+    // 2. LIVE UPDATE: Refresh every 5 seconds (matched to Dashboard)
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, [user, user?.id]); // Re-run if user logs in or ID becomes available
-  // Stats calculation
+  }, [fetchData]);
+  // 3. Stats calculation with case-insensitive matching
   const totalApplications = applications.length;
-  const activeApplications = applications.filter(a => ['Applied', 'Interviewing', 'Interview'].includes(a.status)).length;
-  const interviews = applications.filter(a => ['Interview', 'Interviewing'].includes(a.status)).length;
-  const offers = applications.filter(a => ['Offer', 'Accepted', 'offered'].includes(a.status?.toLowerCase())).length;
-  const successRate = totalApplications > 0 ? Math.round((offers / totalApplications) * 100) : 0;
-  // Show data as soon as it's available, OR stop loading after a few seconds anyway
+  
+  const activeApplications = applications.filter(a => {
+    const s = a.status?.toLowerCase();
+    return ['applied', 'interviewing', 'interview'].includes(s);
+  }).length;
+  const interviews = applications.filter(a => {
+    const s = a.status?.toLowerCase();
+    return ['interview', 'interviewing'].includes(s);
+  }).length;
+  const offers = applications.filter(a => {
+    const s = a.status?.toLowerCase();
+    return ['offer', 'accepted', 'offered'].includes(s);
+  }).length;
   if (isLoading && applications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -61,7 +62,7 @@ export function JobTrackingSystem() {
         </div>
         <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-sm font-medium">
           <Zap className="w-4 h-4 fill-current text-green-500" /> 
-          <span className="animate-pulse">Live Updates Active</span>
+          <span className="animate-pulse font-bold">Live Updates Active</span>
         </div>
       </div>
       {/* Stats Grid */}
@@ -75,10 +76,10 @@ export function JobTrackingSystem() {
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Pipeline Status</h3>
         <div className="space-y-6">
-          <ProgressBar label="Applied" count={applications.filter(a => a.status === 'Applied').length} total={totalApplications} color="bg-blue-500" />
+          <ProgressBar label="Applied" count={applications.filter(a => a.status?.toLowerCase() === 'applied').length} total={totalApplications} color="bg-blue-500" />
           <ProgressBar label="Interviewing" count={interviews} total={totalApplications} color="bg-purple-500" />
           <ProgressBar label="Offers Received" count={offers} total={totalApplications} color="bg-green-500" />
-          <ProgressBar label="Rejections" count={applications.filter(a => a.status === 'Rejected').length} total={totalApplications} color="bg-red-400" />
+          <ProgressBar label="Rejections" count={applications.filter(a => a.status?.toLowerCase() === 'rejected').length} total={totalApplications} color="bg-red-400" />
         </div>
       </div>
     </div>
