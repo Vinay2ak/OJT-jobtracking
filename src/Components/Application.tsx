@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
 import { Search, Filter, Download } from 'lucide-react';
-import { ApplicationTable } from './AplicationTable';
+import { ApplicationTable } from './AplicationTable.tsx';
 import { AddApplicationModal } from './AddAplication';
 import FeatureButton from './FeatureButton';
 import { apiClient } from '../services/api';
