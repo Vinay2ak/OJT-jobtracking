@@ -58,53 +58,72 @@ class CustomTokenObtainPairView(APIView):
         import traceback
         import json
         
-        # AGGRESSIVE FIX: Keep unwrapping the data if it is double or triple encoded as a string
-        data = request.data
-        for _ in range(3):
-            if isinstance(data, str):
-                try:
-                    new_data = json.loads(data)
-                    if new_data == data: break
-                    data = new_data
-                except:
-                    break
-            else:
-                break
+        # 1. Capture the raw data
+        raw_data = request.data
+        print(f"DEBUG RAW DATA: {raw_data}", flush=True)
+
+        # 2. Extract email and password safely
+        email = None
+        password = None
+
+        if isinstance(raw_data, dict):
+            email = raw_data.get('email') or raw_data.get('username')
+            password = raw_data.get('password')
+        elif isinstance(raw_data, str):
+            # If the frontend sent JUST the email string (common in OTP step 1)
+            email = raw_data
         
-        print(f"DEBUG RECEIVED DATA: {data}", flush=True)
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
 
-        # Handle various possible field names from frontend
-        email = data.get('email') or data.get('username') or data.get('emailAddress')
-        password = data.get('password') or data.get('pass')
-
-        if not email or not password:
-            return Response({
-                "error": "Email and password are required",
-                "received_keys": list(data.keys()) if isinstance(data, dict) else "not_a_dict"
-            }, status=400)
-
+        # 3. Find the user
         try:
-            # Manual authentication
-            user = authenticate(username=email, password=password)
-            print(f"DEBUG: Authenticate result: {user}", flush=True)
-        except Exception as e:
-            print("!!! AUTH SYSTEM CRASHED !!!", flush=True)
-            traceback.print_exc()
-            return Response({"error": f"Auth crash: {str(e)}"}, status=500)
+            user_obj = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist"}, status=404)
 
-        if user is not None:
-            # DIRECT LOGIN VERSION (No OTP)
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "token": str(refresh.access_token), # For frontend compatibility
-                "message": "LOGIN_SUCCESS",
-                "email": user.email,
-                "username": user.username
-            }, status=200)
+        # 4. DECISION: Direct Login or OTP?
+        if password:
+            # --- DIRECT LOGIN ---
+            user_auth = authenticate(username=email, password=password)
+            if user_auth:
+                from rest_framework_simplejwt.tokens import RefreshToken
+                refresh = RefreshToken.for_user(user_auth)
+                return Response({
+                    "access": str(refresh.access_token),
+                    "token": str(refresh.access_token),
+                    "message": "LOGIN_SUCCESS",
+                    "email": user_auth.email
+                }, status=200)
+            else:
+                return Response({"error": "Invalid password"}, status=401)
         else:
-            return Response({"error": "Invalid email or password"}, status=401)
+            # --- OTP LOGIN (Step 1) ---
+            otp = str(random.randint(100000, 999999))
+            try:
+                OTP.objects.filter(email=email).delete()
+                OTP.objects.create(email=email, otp=otp)
+            except Exception as e:
+                return Response({"error": f"Database Error: {str(e)}"}, status=500)
+            
+            print(f"!!! OTP FOR {email} IS: {otp} !!!", flush=True)
+            
+            try:
+                send_email_via_brevo(
+                    to_email=email,
+                    subject="Your Login Code",
+                    body=f"Your verification code is: {otp}"
+                )
+                mail_status = "SENT"
+            except:
+                mail_status = "FAILED"
+                
+            return Response({
+                "message": "OTP_SENT",
+                "email": email,
+                "otp_for_debug": otp,
+                "mail_status": mail_status
+            }, status=200)
 
 
 class SignupView(APIView):
