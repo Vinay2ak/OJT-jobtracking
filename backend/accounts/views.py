@@ -56,8 +56,18 @@ class CustomTokenObtainPairView(APIView):
 
     def post(self, request, *args, **kwargs):
         import traceback
-        email = request.data.get('email') or request.data.get('username')
-        password = request.data.get('password')
+        import json
+        
+        # SAFETY FIX: If request.data is a string, parse it
+        data = request.data
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except:
+                pass
+        
+        email = data.get('email') or data.get('username')
+        password = data.get('password')
 
         print(f"\n--- LOGIN ATTEMPT: {email} ---", flush=True)
 
