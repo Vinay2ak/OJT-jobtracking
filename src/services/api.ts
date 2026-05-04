@@ -8,20 +8,34 @@ const getHeaders = () => {
   };
 };
 export const apiClient = {
-  // --- ADDED AUTH FUNCTIONS ---
+  // --- AUTH FUNCTIONS ---
+  // Step 1: Request OTP
   async login(credentials: any) {
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Login failed");
-    }
     const data = await response.json();
-    // This saves the token so getHeaders() can find it
-    localStorage.setItem("token", data.access);
+    if (!response.ok) {
+      throw new Error(data.error || data.detail || "Login failed");
+    }
+    return data; // Should return { message: "OTP_SENT" }
+  },
+  // Step 2: Verify OTP
+  async verifyOTP(email: string, otp: string) {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Invalid verification code");
+    }
+    if (data.access) {
+      localStorage.setItem("token", data.access);
+    }
     return data;
   },
   async signup(data: any) {
@@ -36,7 +50,7 @@ export const apiClient = {
     }
     return response.json();
   },
-  // --- EXISTING FUNCTIONS (REMAINING AS IS) ---
+  // --- EXISTING FUNCTIONS (REMAINING UNCHANGED) ---
   async getApplications() {
     const response = await fetch(`${API_BASE_URL}/api/applications/`, { headers: getHeaders() });
     if (!response.ok) return [];
@@ -96,14 +110,8 @@ export const apiClient = {
     return response.json();
   },
   
-  // ==========================================
-  // GMAIL INTEGRATION ENDPOINTS
-  // ==========================================
-  
-  // 1. Get the Google Login URL to redirect the user
   async connectGmail() {
     try {
-      // Use the exact same getHeaders() that works for your other API calls
       const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/connect/`, {
         method: "GET",
         headers: getHeaders(),
@@ -113,22 +121,18 @@ export const apiClient = {
         alert("Backend Error: " + (errorData.detail || "Unauthorized. Please check your login."));
         return;
       }
-      
       const data = await response.json();
-      
-      // Successfully got the Google URL from Django, now redirect the user!
       if (data.auth_url || data.url || data.authorization_url) {
         window.location.href = data.auth_url || data.url || data.authorization_url;
       } else {
         alert("Error: Backend did not return a valid Google login URL.");
       }
     } catch(e) {
-      alert("Network Error: Could not reach the backend server to connect Gmail. Please check your browser console.");
+      alert("Network Error: Could not reach the backend server to connect Gmail.");
       console.error(e);
     }
   },
   
-  // 2. Check if the user is currently connected
   async getGmailStatus() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/status/`, {
@@ -142,7 +146,6 @@ export const apiClient = {
     }
   },
   
-  // 3. Disconnect Gmail
   async disconnectGmail() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/disconnect/`, {
