@@ -71,20 +71,17 @@ class CustomTokenObtainPairView(APIView):
             else:
                 break
         
-        # Final safety check
-        if not isinstance(data, dict):
-            return Response({
-                "error": f"Backend received {type(data).__name__} instead of a JSON object. Please check your frontend data.",
-                "debug_data": str(data)[:100]
-            }, status=400)
-        
-        email = data.get('email') or data.get('username')
-        password = data.get('password')
+        print(f"DEBUG RECEIVED DATA: {data}", flush=True)
 
-        print(f"\n--- LOGIN ATTEMPT: {email} ---", flush=True)
+        # Handle various possible field names from frontend
+        email = data.get('email') or data.get('username') or data.get('emailAddress')
+        password = data.get('password') or data.get('pass')
 
         if not email or not password:
-            return Response({"error": "Email and password are required"}, status=400)
+            return Response({
+                "error": "Email and password are required",
+                "received_keys": list(data.keys()) if isinstance(data, dict) else "not_a_dict"
+            }, status=400)
 
         try:
             # Manual authentication
@@ -96,38 +93,15 @@ class CustomTokenObtainPairView(APIView):
             return Response({"error": f"Auth crash: {str(e)}"}, status=500)
 
         if user is not None:
-            otp = str(random.randint(100000, 999999))
-            try:
-                # Store OTP in database
-                OTP.objects.filter(email=user.email).delete()
-                OTP.objects.create(email=user.email, otp=otp)
-                print(f"DEBUG: OTP created: {otp}", flush=True)
-            except Exception as e:
-                print("!!! DATABASE OTP CRASH !!!", flush=True)
-                traceback.print_exc()
-                return Response({"error": f"Database error (Run migrations!): {str(e)}"}, status=500)
-
-            print(f"!!! OTP FOR {user.email} IS: {otp} !!!", flush=True)
-
-            mail_status = "NOT_ATTEMPTED"
-            try:
-                send_email_via_brevo(
-                    to_email=user.email,
-                    subject="Your Login Verification Code",
-                    body=f"Your verification code is: {otp}\n\nThis code expires in 10 minutes."
-                )
-                mail_status = "SENT"
-                print(f"DEBUG: Email SENT successfully", flush=True)
-            except Exception as e:
-                mail_status = f"FAILED: {str(e)}"
-                print(f"DEBUG: Brevo email error: {str(e)}", flush=True)
-                traceback.print_exc()
-
+            # DIRECT LOGIN VERSION (No OTP)
+            refresh = RefreshToken.for_user(user)
             return Response({
-                "message": "OTP_SENT",
-                "otp_for_debug": otp,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "token": str(refresh.access_token), # For frontend compatibility
+                "message": "LOGIN_SUCCESS",
                 "email": user.email,
-                "mail_status": mail_status
+                "username": user.username
             }, status=200)
         else:
             return Response({"error": "Invalid email or password"}, status=401)
