@@ -53,27 +53,40 @@ def send_email_via_brevo(to_email, subject, body):
 class CustomTokenObtainPairView(APIView):
     permission_classes = []
     authentication_classes = []
+
     def post(self, request, *args, **kwargs):
+        import traceback
         email = request.data.get('email') or request.data.get('username')
         password = request.data.get('password')
+
+        print(f"\n--- LOGIN ATTEMPT: {email} ---", flush=True)
+
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=400)
+
         try:
             # Manual authentication
             user = authenticate(username=email, password=password)
+            print(f"DEBUG: Authenticate result: {user}", flush=True)
         except Exception as e:
+            print("!!! AUTH SYSTEM CRASHED !!!", flush=True)
+            traceback.print_exc()
             return Response({"error": f"Auth crash: {str(e)}"}, status=500)
+
         if user is not None:
             otp = str(random.randint(100000, 999999))
             try:
                 # Store OTP in database
                 OTP.objects.filter(email=user.email).delete()
                 OTP.objects.create(email=user.email, otp=otp)
+                print(f"DEBUG: OTP created: {otp}", flush=True)
             except Exception as e:
-                # If this fails, it means you MUST run migrations on Render
-                print(f"DATABASE ERROR: {str(e)}")
+                print("!!! DATABASE OTP CRASH !!!", flush=True)
+                traceback.print_exc()
                 return Response({"error": f"Database error (Run migrations!): {str(e)}"}, status=500)
-            print(f"\n!!! OTP FOR {user.email} IS: {otp} !!!\n", flush=True)
+
+            print(f"!!! OTP FOR {user.email} IS: {otp} !!!", flush=True)
+
             mail_status = "NOT_ATTEMPTED"
             try:
                 send_email_via_brevo(
@@ -82,8 +95,12 @@ class CustomTokenObtainPairView(APIView):
                     body=f"Your verification code is: {otp}\n\nThis code expires in 10 minutes."
                 )
                 mail_status = "SENT"
+                print(f"DEBUG: Email SENT successfully", flush=True)
             except Exception as e:
                 mail_status = f"FAILED: {str(e)}"
+                print(f"DEBUG: Brevo email error: {str(e)}", flush=True)
+                traceback.print_exc()
+
             return Response({
                 "message": "OTP_SENT",
                 "otp_for_debug": otp,
