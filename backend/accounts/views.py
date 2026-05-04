@@ -58,13 +58,25 @@ class CustomTokenObtainPairView(APIView):
         import traceback
         import json
         
-        # SAFETY FIX: If request.data is a string, parse it
+        # AGGRESSIVE FIX: Keep unwrapping the data if it is double or triple encoded as a string
         data = request.data
-        if isinstance(data, str):
-            try:
-                data = json.loads(data)
-            except:
-                pass
+        for _ in range(3):
+            if isinstance(data, str):
+                try:
+                    new_data = json.loads(data)
+                    if new_data == data: break
+                    data = new_data
+                except:
+                    break
+            else:
+                break
+        
+        # Final safety check
+        if not isinstance(data, dict):
+            return Response({
+                "error": f"Backend received {type(data).__name__} instead of a JSON object. Please check your frontend data.",
+                "debug_data": str(data)[:100]
+            }, status=400)
         
         email = data.get('email') or data.get('username')
         password = data.get('password')
