@@ -93,7 +93,12 @@ class CustomTokenObtainPairView(APIView):
                     "access": str(refresh.access_token),
                     "token": str(refresh.access_token),
                     "message": "LOGIN_SUCCESS",
-                    "email": user_auth.email
+                    "email": user_auth.email,
+                    "user": {
+                        "id": user_auth.id,
+                        "email": user_auth.email,
+                        "name": user_auth.get_full_name() or user_auth.username
+                    }
                 }, status=200)
             else:
                 return Response({"error": "Invalid password"}, status=401)
@@ -160,6 +165,10 @@ class VerifyOTPView(APIView):
     def post(self, request):
         email = request.data.get('email')
         otp = request.data.get('otp')
+        
+        if not email or not otp:
+            return Response({"error": "Email and OTP are required"}, status=400)
+            
         otp_obj = OTP.objects.filter(email=email).last()
         if otp_obj and not otp_obj.is_expired() and otp_obj.otp == otp:
             otp_obj.delete()
@@ -172,12 +181,17 @@ class VerifyOTPView(APIView):
                     "message": "Email verified",
                     "access": str(refresh.access_token),
                     "refresh": str(refresh),
-                    "token": str(refresh.access_token), # Add token key for frontend compatibility
+                    "token": str(refresh.access_token), # Support both 'access' and 'token' keys
                     "username": user.username,
-                    "email": user.email
+                    "email": user.email,
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "name": user.get_full_name() or user.username
+                    }
                 }, status=200)
             except User.DoesNotExist:
-                return Response({"message": "Email verified"}, status=200)
+                return Response({"error": "User no longer exists"}, status=404)
                 
         return Response({"error": "Invalid or expired OTP"}, status=400)
 
@@ -202,7 +216,12 @@ class LoginWithOTPView(APIView):
             "access": str(refresh.access_token),
             "token": str(refresh.access_token), # Added for frontend compatibility
             "username": user.username,
-            "email": user.email
+            "email": user.email,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.get_full_name() or user.username
+            }
         }, status=200)
 
 
@@ -222,26 +241,31 @@ class GoogleLoginView(APIView):
         if not token:
             return Response({"error": "Google token required"}, status=400)
 
-        # Verify the Google ID token
+        # Try to verify as Access Token first (since frontend sends access_token)
+        google_data = None
         try:
-            verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
-            req = urllib.request.Request(verify_url)
-            response = urllib.request.urlopen(req, timeout=10)
-            google_data = json.loads(response.read().decode('utf-8'))
-
-            email = google_data.get('email')
-            name = google_data.get('name', '')
-
-            if not email:
-                return Response({"error": "Could not get email from Google"}, status=400)
-
-            # Check if Google Client ID matches
-            if google_data.get('aud') != settings.GOOGLE_CLIENT_ID:
-                return Response({"error": "Invalid Google token"}, status=400)
-
+            # Try UserInfo endpoint (for Access Tokens)
+            userinfo_url = f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+            req = urllib.request.Request(userinfo_url)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                google_data = json.loads(response.read().decode('utf-8'))
         except Exception as e:
-            print(f"Google token verification failed: {e}", flush=True)
-            return Response({"error": "Invalid Google token"}, status=400)
+            print(f"Google Access Token verification failed, trying ID Token: {e}", flush=True)
+            try:
+                # Fallback to TokenInfo endpoint (for ID Tokens)
+                verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
+                req = urllib.request.Request(verify_url)
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    google_data = json.loads(response.read().decode('utf-8'))
+            except Exception as e2:
+                print(f"Google ID Token verification failed: {e2}", flush=True)
+                return Response({"error": "Invalid Google token (tried both access and id tokens)"}, status=400)
+
+        if not google_data or 'email' not in google_data:
+            return Response({"error": "Could not get email from Google"}, status=400)
+
+        email = google_data.get('email')
+        name = google_data.get('name', '')
 
         # Get or create user
         user, created = User.objects.get_or_create(
