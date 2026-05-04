@@ -4,6 +4,7 @@ const getHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
+    "Accept": "application/json", // Added this to force JSON responses
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
@@ -13,14 +14,23 @@ export const apiClient = {
   async login(credentials: any) {
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json" // Force the backend to send JSON errors
+      },
       body: JSON.stringify(credentials),
     });
-    const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || data.detail || "Login failed");
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.error || errorData.detail || "Login failed");
+      } catch(e) {
+        // If the backend still sends HTML, we show a clean message
+        throw new Error("Backend Server Error (500). Please check your Render Logs.");
+      }
     }
-    return data; // Should return { message: "OTP_SENT" }
+    return response.json();
   },
   // Step 2: Verify OTP
   async verifyOTP(email: string, otp: string) {
