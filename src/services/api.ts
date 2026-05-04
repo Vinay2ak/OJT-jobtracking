@@ -39,7 +39,7 @@ export const apiClient = {
     return data; 
   },
   // Keep this for compatibility, but login will now happen in Step 1
-  async verifyOTP(email: string, otp: string) {
+  async verifyOtp(email: string, otp: string) {
     const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
