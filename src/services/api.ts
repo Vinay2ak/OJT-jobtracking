@@ -8,6 +8,35 @@ const getHeaders = () => {
   };
 };
 export const apiClient = {
+  // --- ADDED AUTH FUNCTIONS ---
+  async login(credentials: any) {
+    const response = await fetch(`${API_BASE_URL}/api/token/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Login failed");
+    }
+    const data = await response.json();
+    // This saves the token so getHeaders() can find it
+    localStorage.setItem("token", data.access);
+    return data;
+  },
+  async signup(data: any) {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/signup/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Signup failed");
+    }
+    return response.json();
+  },
+  // --- EXISTING FUNCTIONS (REMAINING AS IS) ---
   async getApplications() {
     const response = await fetch(`${API_BASE_URL}/api/applications/`, { headers: getHeaders() });
     if (!response.ok) return [];
@@ -66,6 +95,7 @@ export const apiClient = {
     if (!response.ok) return { stats: {} };
     return response.json();
   },
+  
   // ==========================================
   // GMAIL INTEGRATION ENDPOINTS
   // ==========================================
