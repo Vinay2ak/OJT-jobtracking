@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, AlertCircle } from 'lucide-react';
+import { Search, Filter, Download, AlertCircle, CheckCircle } from 'lucide-react'; // Added CheckCircle
 import { ApplicationTable } from './AplicationTable.tsx';
 import { AddApplicationModal } from './AddAplication';
 import FeatureButton from './FeatureButton';
@@ -14,11 +14,13 @@ export function Applications() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // New state for the custom delete popup
+  // Gmail connection state
+  const [gmailConnected, setGmailConnected] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
     fetchData();
+    checkGmailStatus(); // Check Gmail status on load
   }, []);
 
   const fetchData = async () => {
@@ -32,122 +34,71 @@ export function Applications() {
     }
   };
 
-  const filteredApplications = (applications || []).filter(app => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (app.company || '').toLowerCase().includes(query) || 
-                         (app.role || '').toLowerCase().includes(query);
-    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleAddApplication = async (newApp: any) => {
+  const checkGmailStatus = async () => {
     try {
-      await fetchData(); 
-      console.log("Job added successfully.");
-    } catch (error) {
-      console.error("Error updating list", error);
+      const res = await apiClient.getGmailStatus();
+      setGmailConnected(res.is_connected);
+    } catch (e) {
+      console.error("Failed to fetch Gmail status", e);
     }
   };
 
-  const handleEditApplication = async (updatedApp) => {
-    try {
-      await apiClient.updateJob(updatedApp.id, updatedApp);
-      fetchData();
-      setIsModalOpen(false);
-    } catch (e) { 
-      alert("Update failed"); 
-    }
-  };
-
-  // Triggers the custom popup instead of window.confirm
-  const handleDeleteApplication = (id: any) => {
-    setDeleteId(id);
-  };
-
-  // The actual deletion logic called when you click "Yes, Delete"
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await apiClient.deleteApplication(deleteId);
-      await fetchData();
-      setDeleteId(null);
-    } catch (error) {
-      console.error("Delete failed", error);
-      alert("Failed to delete application.");
-      setDeleteId(null);
-    }
-  };
-
-  if (isLoading) return <div style={{padding: '50px', textAlign: 'center'}}>Syncing with Database...</div>;
+  // ... (keep filteredApplications, handleAddApplication, handleEditApplication, etc. the same)
 
   return (
     <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
       {/* Header Banner */}
       <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '40px', borderRadius: '12px', marginBottom: '30px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '2.5rem', marginBottom: '10px', fontWeight: 'bold' }}>Track Your Job</h2>
-        <button 
-          onClick={() => setIsModalOpen(true)} 
-          style={{ background: '#111', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          Add New Application
-        </button>
-      </div>
+        
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', alignItems: 'center' }}>
+          <button 
+            onClick={() => setIsModalOpen(true)} 
+            style={{ background: '#111', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Add New Application
+          </button>
 
-      {/* Search Bar */}
-      <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
-        <input 
-          type="text" 
-          placeholder="Search company or role..." 
-          value={searchQuery} 
-          onChange={e => setSearchQuery(e.target.value)} 
-          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} 
-        />
-      </div>
-
-      <ApplicationTable
-        applications={filteredApplications}
-        onEdit={(app) => { setEditingApplication(app); setIsModalOpen(true); }}
-        onDelete={handleDeleteApplication}
-        onToggleFollowUp={() => {}} 
-      />
-
-      <AddApplicationModal
-        isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingApplication(undefined); }}
-        onSubmit={editingApplication ? handleEditApplication : handleAddApplication}
-        application={editingApplication}
-      />
-
-      {/* Custom Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center border border-slate-200 dark:border-slate-800 transition-all">
-            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-12 h-12" />
+          {/* GMAIL BUTTON ADDED HERE */}
+          {!gmailConnected ? (
+            <button 
+              onClick={() => apiClient.connectGmail()}
+              style={{ 
+                background: '#fff', 
+                color: '#111', 
+                padding: '12px 24px', 
+                borderRadius: '8px', 
+                border: '1px solid #ddd', 
+                cursor: 'pointer', 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '16px', height: '16px' }} />
+              Connect Gmail
+            </button>
+          ) : (
+            <div style={{ 
+              background: 'rgba(255,255,255,0.2)', 
+              color: '#fff', 
+              padding: '12px 24px', 
+              borderRadius: '8px', 
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }}>
+              <CheckCircle style={{ width: '18px', height: '18px' }} />
+              Gmail Parsing Active
             </div>
-            
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Are you sure?</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-              Do you really want to delete this job application? This action cannot be undone.
-            </p>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 px-4 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all"
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
+      
+      {/* ... (rest of the component) */}
     </div>
   );
 }
