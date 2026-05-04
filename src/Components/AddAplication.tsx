@@ -2,12 +2,14 @@
 import { X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+
 interface AddApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (application: any) => void;
   application?: any;
 }
+
 export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: AddApplicationModalProps) {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -22,9 +24,11 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [success, setSuccess] = useState(false);
+
   // Gmail connection states
   const [gmailConnected, setGmailConnected] = useState(false);
   const [checkingGmail, setCheckingGmail] = useState(true);
+
   useEffect(() => {
     if (isOpen) {
       if (application) {
@@ -51,6 +55,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
       setErrors({});
       setSubmitError('');
       setSuccess(false);
+
       // Check if user has connected their Gmail account
       apiClient.getGmailStatus()
         .then((res) => {
@@ -66,25 +71,25 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
         });
     }
   }, [application, isOpen]);
+
   const validate = () => {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = 'Full Name is required';
-    
-    // Removed Email Address validation entirely as per your request
-    
     if (!formData.company.trim()) newErrors.company = 'Company Name is required';
     if (!formData.role.trim()) newErrors.role = 'Job Role is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     const newValue = type === 'checkbox' ? e.target.checked : value;
     setFormData(prev => ({ ...prev, [name]: newValue }));
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSubmitting || success) return; // Prevent double trigger
+    if (isSubmitting || success) return; 
     if (!validate()) return;
     setIsSubmitting(true);
     setSubmitError('');
@@ -95,8 +100,8 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
         onClose();
       } else {
         const created = await apiClient.createJob(formData);
-        await onSubmit(created); // Updates the table in background
-        setSuccess(true); // Shows the "Done" button screen
+        await onSubmit(created); 
+        setSuccess(true); 
       }
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to save application.');
@@ -104,7 +109,9 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
       setIsSubmitting(false);
     }
   };
+
   if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800">
@@ -118,6 +125,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
             <X className="w-5 h-5" />
           </button>
         </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {!success ? (
@@ -134,7 +142,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                 <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
                 {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
               </div>
-              {/* EMAIL FIELD COMPLETELY REMOVED */}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company *</label>
@@ -147,6 +155,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                   {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platform</label>
@@ -166,6 +175,7 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                   </select>
                 </div>
               </div>
+
               {/* NEW AI GMAIL PARSING BLOCK */}
               <div className="p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
                 <div className="flex items-start justify-between">
@@ -184,22 +194,13 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                     <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md border border-green-200 dark:border-green-800">
                       <CheckCircle className="w-3 h-3" /> Connected
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="text-[10px] font-bold text-blue-600 uppercase">Available</span>
+                  )}
                 </div>
-                {/* Show Google Login button if NOT connected */}
-                {!checkingGmail && !gmailConnected && (
-                  <button 
-                    type="button"
-                    onClick={() => apiClient.connectGmail()}
-                    className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-                  >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                    Sign in with Google to Enable
-                  </button>
-                )}
-                
+
                 {/* Show Checkbox if ALREADY connected */}
-                {!checkingGmail && gmailConnected && (
+                {!checkingGmail && gmailConnected ? (
                   <div className="flex items-center gap-2 mt-2 pt-3 border-t border-blue-100 dark:border-blue-900/30">
                     <input 
                       type="checkbox" 
@@ -213,6 +214,12 @@ export function AddApplicationModal({ isOpen, onClose, onSubmit, application }: 
                       Enable AI scanning for this specific job
                     </label>
                   </div>
+                ) : (
+                  !checkingGmail && (
+                    <p className="text-[10px] text-blue-600 italic">
+                      Connect Gmail from the dashboard to enable AI tracking.
+                    </p>
+                  )
                 )}
               </div>
             </form>
