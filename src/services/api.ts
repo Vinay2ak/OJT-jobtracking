@@ -4,19 +4,19 @@ const getHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
-    "Accept": "application/json", // Added this to force JSON responses
+    "Accept": "application/json", // Ensures we always get JSON from the server
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 export const apiClient = {
   // --- AUTH FUNCTIONS ---
-  // Step 1: Request OTP
+  // Updated for DIRECT LOGIN (No OTP needed)
   async login(credentials: any) {
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "Accept": "application/json" // Force the backend to send JSON errors
+        "Accept": "application/json" 
       },
       body: JSON.stringify(credentials),
     });
@@ -26,13 +26,19 @@ export const apiClient = {
         const errorData = JSON.parse(errorText);
         throw new Error(errorData.error || errorData.detail || "Login failed");
       } catch(e) {
-        // If the backend still sends HTML, we show a clean message
         throw new Error("Backend Server Error (500). Please check your Render Logs.");
       }
     }
-    return response.json();
+    const data = await response.json();
+    
+    // SAVE THE TOKEN IMMEDIATELY (Bypasses OTP)
+    if (data.access || data.token) {
+      localStorage.setItem("token", data.access || data.token);
+    }
+    
+    return data; 
   },
-  // Step 2: Verify OTP
+  // Keep this for compatibility, but login will now happen in Step 1
   async verifyOTP(email: string, otp: string) {
     const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
       method: "POST",
