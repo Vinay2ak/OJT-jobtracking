@@ -58,15 +58,26 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=400)
 
-        user = authenticate(username=email, password=password)
+        try:
+            # Use email as the username for authentication (as defined in USERNAME_FIELD)
+            user = authenticate(username=email, password=password)
+        except Exception as e:
+            print(f"Auth crash: {str(e)}")
+            return Response({"error": f"Internal authentication error: {str(e)}"}, status=500)
 
         if user is not None:
             otp = str(random.randint(100000, 999999))
-            OTP.objects.filter(email=user.email).delete()
-            OTP.objects.create(email=user.email, otp=otp)
+            try:
+                # Store OTP in database
+                OTP.objects.filter(email=user.email).delete()
+                OTP.objects.create(email=user.email, otp=otp)
+            except Exception as e:
+                print(f"OTP Database crash: {str(e)}")
+                return Response({"error": f"Database error creating OTP: {str(e)}"}, status=500)
 
             print(f"\n!!! OTP FOR {user.email} IS: {otp} !!!\n", flush=True)
 
+            mail_status = "NOT_ATTEMPTED"
             try:
                 send_email_via_brevo(
                     to_email=user.email,
@@ -76,12 +87,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 mail_status = "SENT"
                 print(f"Email SENT to {user.email} via Brevo", flush=True)
             except Exception as e:
-                print(f"Brevo email error: {str(e)}", flush=True)
                 mail_status = f"FAILED: {str(e)}"
+                print(f"Brevo email error: {str(e)}", flush=True)
 
             return Response({
                 "message": "OTP_SENT",
-                "otp_for_debug": otp,
+                "otp_for_debug": otp, # Return for testing/UI
                 "email": user.email,
                 "mail_status": mail_status
             }, status=200)
