@@ -8,16 +8,28 @@ const getHeaders = () => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
+
 export const apiClient = {
-  async login(credentials: any) {
+  async login(emailOrCredentials: any, password?: string) {
+    // FIX: Properly format the payload whether it's passed as (email, password) or a single object
+    let payload;
+    if (typeof emailOrCredentials === 'string' && password) {
+      payload = { email: emailOrCredentials, password };
+    } else if (typeof emailOrCredentials === 'string') {
+      payload = { email: emailOrCredentials };
+    } else {
+      payload = emailOrCredentials;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Accept": "application/json" 
       },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify(payload),
     });
+    
     if (!response.ok) {
       const errorText = await response.text();
       try {
@@ -33,6 +45,7 @@ export const apiClient = {
     }
     return data; 
   },
+
   async verifyOtp(email: string, otp: string) {
     const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
       method: "POST",
@@ -48,18 +61,37 @@ export const apiClient = {
     }
     return data;
   },
-  async signup(data: any) {
+
+  // Alias to ensure both 'signup' and 'register' work flawlessly
+  async signup(nameOrData: any, email?: string, password?: string, codingLanguages?: string) {
+    return this.register(nameOrData, email, password, codingLanguages);
+  },
+
+  async register(nameOrData: any, email?: string, password?: string, codingLanguages?: string) {
+    // FIX: Properly format the payload whether it's passed as 4 arguments or a single object
+    let payload;
+    if (typeof nameOrData === 'string' && email && password) {
+      payload = { fullName: nameOrData, email, password, codingLanguages };
+    } else if (typeof nameOrData === 'string') {
+      try { payload = JSON.parse(nameOrData); } catch(e) { payload = nameOrData; }
+    } else {
+      payload = nameOrData;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/accounts/signup/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
+    
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || "Signup failed");
+      const errorMessage = error.error || error.detail || JSON.stringify(error);
+      throw new Error(errorMessage);
     }
     return response.json();
   },
+
   async getApplications() {
     const response = await fetch(`${API_BASE_URL}/api/applications/`, { headers: getHeaders() });
     if (!response.ok) return [];
