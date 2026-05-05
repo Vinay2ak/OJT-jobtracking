@@ -1,63 +1,82 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
-import api from '../services/api'; // Import your API instance
+import api from '../services/api';
+
+// This tells TypeScript exactly what to expect so Vercel doesn't crash!
+interface JobData {
+  status?: string;
+  applied_date?: string;
+  created_at?: string;
+}
+
 export function Analytics() {
   const [loading, setLoading] = useState(true);
-  // Dynamic Data States
-  const [statusData, setStatusData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [responseRateData, setResponseRateData] = useState<any[]>([]);
+
+  // Dynamic Data States with strict typing
+  const [statusData, setStatusData] = useState<{id: string, name: string, value: number}[]>([]);
+  const [monthlyData, setMonthlyData] = useState<{id: string, month: string, applications: number}[]>([]);
+  const [responseRateData, setResponseRateData] = useState<{id: string, name: string, responses: number}[]>([]);
   const [metrics, setMetrics] = useState({
     responseRate: 0,
     interviewRate: 0,
     offerRate: 0,
     avgResponseTime: 0
   });
+
   const COLORS = ['#10b981', '#059669', '#34d399', '#f59e0b', '#ef4444'];
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        // Fetch all jobs for the logged-in user from the backend
         const response = await api.get('/applications/');
-        const jobs = response.data;
+        const jobs: JobData[] = response.data;
+
         // 1. Calculate Status Distribution
-        const statusCounts = jobs.reduce((acc: any, job: any) => {
+        const statusCounts = jobs.reduce((acc: Record<string, number>, job) => {
           const status = job.status || 'applied';
           acc[status] = (acc[status] || 0) + 1;
           return acc;
         }, {});
+
         setStatusData([
           { id: 'status-applied', name: 'Applied', value: statusCounts.applied || 0 },
           { id: 'status-interviewing', name: 'Interviewing', value: (statusCounts.interviewing || 0) + (statusCounts.interview || 0) },
           { id: 'status-offered', name: 'Offered', value: (statusCounts.offered || 0) + (statusCounts.offer || 0) },
           { id: 'status-rejected', name: 'Rejected', value: statusCounts.rejected || 0 },
-        ].filter(item => item.value > 0)); // Only show slices on the pie chart if they have >0 jobs
+        ].filter(item => item.value > 0)); 
+
         // 2. Calculate Conversion Funnel & Rates
         const total = jobs.length;
-        const responses = jobs.filter((j: any) => ['interviewing', 'interview', 'offered', 'offer', 'rejected'].includes(j.status)).length;
-        const interviews = jobs.filter((j: any) => ['interviewing', 'interview', 'offered', 'offer'].includes(j.status)).length;
-        const offers = jobs.filter((j: any) => ['offered', 'offer', 'accepted'].includes(j.status)).length;
+        const responses = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer', 'rejected'].includes(j.status || '')).length;
+        const interviews = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer'].includes(j.status || '')).length;
+        const offers = jobs.filter(j => ['offered', 'offer', 'accepted'].includes(j.status || '')).length;
+
         setResponseRateData([
           { id: 'rate-response', name: 'Responses', responses: responses },
           { id: 'rate-interview', name: 'Interviews', responses: interviews },
           { id: 'rate-offer', name: 'Offers', responses: offers },
         ]);
+
         setMetrics({
           responseRate: total ? Math.round((responses / total) * 100) : 0,
           interviewRate: total ? Math.round((interviews / total) * 100) : 0,
           offerRate: total ? Math.round((offers / total) * 100) : 0,
           avgResponseTime: 5 // Default placeholder
         });
+
         // 3. Calculate Monthly Applications (Last 6 Months)
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const monthlyCounts = jobs.reduce((acc: any, job: any) => {
-          if (job.applied_date || job.created_at) {
-            const date = new Date(job.applied_date || job.created_at);
+        const monthlyCounts = jobs.reduce((acc: Record<string, number>, job) => {
+          const dateStr = job.applied_date || job.created_at;
+          if (dateStr) {
+            const date = new Date(dateStr);
             const month = months[date.getMonth()];
             acc[month] = (acc[month] || 0) + 1;
           }
           return acc;
         }, {});
+
         const currentMonthIndex = new Date().getMonth();
         const last6Months = [];
         for (let i = 5; i >= 0; i--) {
@@ -71,17 +90,21 @@ export function Analytics() {
           });
         }
         setMonthlyData(last6Months);
+
       } catch (err) {
         console.error("Failed to load analytics:", err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchAnalytics();
   }, []);
+
   if (loading) {
     return <div className="p-6 text-center text-gray-500 animate-pulse">Loading analytics...</div>;
   }
+
   return (
     <div className="space-y-6 p-6">
       {/* Key Metrics */}
@@ -107,6 +130,7 @@ export function Analytics() {
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Estimated</p>
         </div>
       </div>
+
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Status Distribution */}
@@ -136,6 +160,7 @@ export function Analytics() {
             </ResponsiveContainer>
           )}
         </div>
+
         {/* Monthly Applications */}
         <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-6">
           <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Applications Over Time</h3>
@@ -151,6 +176,7 @@ export function Analytics() {
           </ResponsiveContainer>
         </div>
       </div>
+
       {/* Response Rates Chart */}
       <div className="rounded-lg border border-gray-200 surface dark:border-gray-700 p-6">
         <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Conversion Funnel</h3>
@@ -165,6 +191,7 @@ export function Analytics() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
       {/* Insights */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-6">
