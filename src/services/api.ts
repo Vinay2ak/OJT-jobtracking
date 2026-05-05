@@ -97,6 +97,43 @@ export const apiClient = {
     if (!response.ok) return [];
     return response.json();
   },
+
+  // NEW FUNCTION: Fetches applications with "interviewing" status and merges them with AI extracted Gmail links
+  async getUpcomingInterviews() {
+    try {
+      const [appsResponse, interviewsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/applications/`, { headers: getHeaders() }),
+        fetch(`${API_BASE_URL}/api/interviews/upcoming/`, { headers: getHeaders() })
+      ]);
+
+      const apps = appsResponse.ok ? await appsResponse.json() : [];
+      const aiInterviews = interviewsResponse.ok ? await interviewsResponse.json() : [];
+
+      const interviewingApps = apps.filter((app: any) => 
+        app.status === 'interviewing' || app.status === 'interview'
+      );
+
+      return interviewingApps.map((app: any) => {
+        const aiData = aiInterviews.find((i: any) => 
+          i.company === app.company && i.position === app.position
+        );
+
+        return {
+          id: app.id,
+          company: app.company,
+          position: app.position,
+          scheduled_date: aiData?.scheduledDate || app.lastUpdate || new Date().toISOString(),
+          meeting_link: aiData?.meetingLink || '',
+          meeting_platform: aiData?.meetingPlatform || '',
+          interviewer_name: aiData?.interviewerName || '',
+          notes: aiData?.notes || app.notes || ''
+        };
+      });
+    } catch (error) {
+      console.error("Failed to fetch interviews", error);
+      return [];
+    }
+  },
   
   async createJob(data: any) {
     const payload = {
