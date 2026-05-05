@@ -45,7 +45,7 @@ tzdata==2024.2
 ujson==5.10.0
 uritemplate==4.1.1
 urllib3==2.2.3
-zope.interface==6.4.1
+zope.interface==8.3
 dj-database-url==2.2.0
 whitenoise==6.7.0
 apscheduler==3.11.2
