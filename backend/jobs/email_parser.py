@@ -331,8 +331,10 @@ def scan_user_emails(user):
 
         # PRECISE Gmail search: company name in subject OR from company domain
         # Use quotes to match exact company name, not partial words
+        # Only search for emails that arrived AFTER this job was created in the app
         company_query = f'"{job.company}"'
-        query = f'({company_query}) in:anywhere newer_than:30d -category:promotions -category:social'
+        job_epoch = int(job.applied_date.timestamp())
+        query = f'({company_query}) in:anywhere after:{job_epoch} -category:promotions -category:social'
         messages = search_gmail(access_token, query, max_results=5)
         emails_scanned += len(messages)
 
