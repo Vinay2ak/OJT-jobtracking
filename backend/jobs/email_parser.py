@@ -174,7 +174,7 @@ def keyword_fallback(subject, body, company_name=''):
     if any(kw in text for kw in rejection_keywords):
         return {"classification": "rejection", "meeting_link": "", "interview_date": "", "confidence": 0.75}
     if any(kw in text for kw in interview_keywords):
-        return {"classification": "interview_scheduled", "meeting_link": meeting_link, "interview_date": "", "confidence": 0.65}
+        return {"classification": "interview_scheduled", "meeting_link": meeting_link, "interview_date": "", "confidence": 0.80}
 
     return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
 
