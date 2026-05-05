@@ -183,9 +183,35 @@ export const apiClient = {
   },
   
   async getDashboardData() {
-    const response = await fetch(`${API_BASE_URL}/api/jobs/dashboard/`, { headers: getHeaders() });
-    if (!response.ok) return { stats: {} };
-    return response.json();
+    try {
+      const [dashResponse, interviewsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/jobs/dashboard/`, { headers: getHeaders() }),
+        fetch(`${API_BASE_URL}/api/interviews/upcoming/`, { headers: getHeaders() })
+      ]);
+
+      if (!dashResponse.ok) return { stats: {} };
+      const data = await dashResponse.json();
+      const aiInterviews = interviewsResponse.ok ? await interviewsResponse.json() : [];
+
+      // Attach the AI-extracted interview date and link to the jobs in the dashboard
+      const enhancedJobs = (data.all_jobs || []).map((job: any) => {
+        const aiData = aiInterviews.find((i: any) => 
+          i.company === job.company && i.position === job.position
+        );
+        return {
+          ...job,
+          interviewDate: aiData?.scheduledDate || null,
+          meetingLink: aiData?.meetingLink || null
+        };
+      });
+
+      return {
+        ...data,
+        all_jobs: enhancedJobs
+      };
+    } catch (e) {
+      return { stats: {} };
+    }
   },
   
   async connectGmail() {
