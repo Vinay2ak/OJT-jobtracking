@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { apiClient } from '../services/api';
-import { useAuth } from '../contexts/AuthContext'; // Required to get the user ID!
 
 interface JobData {
   status?: string;
@@ -12,7 +11,6 @@ interface JobData {
 }
 
 export function Analytics() {
-  const { user } = useAuth(); // Grab the logged-in user
   const [loading, setLoading] = useState(true);
 
   // Dynamic Data States
@@ -29,19 +27,17 @@ export function Analytics() {
   const COLORS = ['#10b981', '#059669', '#34d399', '#f59e0b', '#ef4444'];
 
   useEffect(() => {
-    // If the user isn't loaded yet, wait for them
-    if (!user?.id) return;
-
     const fetchAnalytics = async () => {
       try {
-        setLoading(true);
-        // Use the exact same fetch method that the Applications page uses
-        const data = await apiClient.getApplications(user.id);
-        const jobs: JobData[] = Array.isArray(data) ? data : [];
+        // Fetch directly without waiting for user ID. The apiClient already has your auth token.
+        const response = await apiClient.get('/applications/');
+        
+        // Ensure we always have an array, even if the API wraps it in a 'results' object
+        const data = response.data;
+        const jobs: JobData[] = Array.isArray(data) ? data : (data?.results || []);
 
         // 1. Calculate Status Distribution
         const statusCounts = jobs.reduce((acc: Record<string, number>, job) => {
-          // Normalize to lowercase so 'Applied' and 'applied' are counted together
           const status = (job.status || 'applied').toLowerCase();
           acc[status] = (acc[status] || 0) + 1;
           return acc;
@@ -76,7 +72,6 @@ export function Analytics() {
         // 3. Calculate Monthly Applications (Last 6 Months)
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthlyCounts = jobs.reduce((acc: Record<string, number>, job) => {
-          // Support both frontend camelCase and backend snake_case dates
           const dateStr = job.appliedDate || job.applied_date || job.created_at;
           if (dateStr) {
             const date = new Date(dateStr);
@@ -103,12 +98,13 @@ export function Analytics() {
       } catch (err) {
         console.error("Failed to load analytics:", err);
       } finally {
-        setLoading(false);
+        // This guarantees the loading screen goes away no matter what
+        setLoading(false); 
       }
     };
 
     fetchAnalytics();
-  }, [user]); // Re-run this automatically when the user logs in!
+  }, []);
 
   if (loading) {
     return <div className="p-6 text-center text-gray-500 animate-pulse">Loading analytics...</div>;
