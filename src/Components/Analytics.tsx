@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
-import api from '../services/api';
+import { apiClient } from '../services/api'; // Corrected import for your project
 
 // This tells TypeScript exactly what to expect so Vercel doesn't crash!
 interface JobData {
@@ -29,7 +29,8 @@ export function Analytics() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await api.get('/applications/');
+        // Use apiClient instead of api
+        const response = await apiClient.get('/applications/');
         const jobs: JobData[] = response.data;
 
         // 1. Calculate Status Distribution
