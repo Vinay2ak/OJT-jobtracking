@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     SignupView, SendOTPView, VerifyOTPView, LoginWithOTPView, LoginStep1View,
     GoogleLoginView, GmailConnectView, GmailCallbackView, GmailStatusView, GmailDisconnectView,
+    GmailManualScanView,
 )
 
 urlpatterns = [
@@ -20,4 +21,5 @@ urlpatterns = [
     path('gmail/callback/', GmailCallbackView.as_view()),
     path('gmail/status/', GmailStatusView.as_view()),
     path('gmail/disconnect/', GmailDisconnectView.as_view()),
+    path('gmail/scan/', GmailManualScanView.as_view()),
 ]

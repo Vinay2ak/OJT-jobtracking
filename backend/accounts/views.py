@@ -392,12 +392,13 @@ class GmailStatusView(APIView):
         try:
             conn = request.user.gmail_connection
             return Response({
+                "is_connected": conn.is_active,
                 "connected": conn.is_active,
                 "email": conn.gmail_email,
                 "connected_at": conn.connected_at.isoformat(),
             })
         except GmailConnection.DoesNotExist:
-            return Response({"connected": False})
+            return Response({"is_connected": False, "connected": False})
 
 
 class GmailDisconnectView(APIView):
@@ -412,3 +413,19 @@ class GmailDisconnectView(APIView):
             return Response({"message": "Gmail disconnected"})
         except GmailConnection.DoesNotExist:
             return Response({"message": "No Gmail connection found"})
+
+
+class GmailManualScanView(APIView):
+    """Manually trigger email scanning for the current user. Useful for testing."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            from jobs.email_parser import scan_user_emails
+            count, updates = scan_user_emails(request.user)
+            return Response({
+                "message": f"Scan complete. {count} job(s) updated.",
+                "updates": updates,
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
