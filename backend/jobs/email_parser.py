@@ -164,8 +164,9 @@ def keyword_fallback(subject, body, company_name=''):
                           'not selected', 'decided not to proceed', 'will not be moving',
                           'after careful consideration']
     # Interview keywords (require action words, not just "interview" mention)
-    interview_keywords = ['schedule an interview', 'invite you for', 'interview scheduled',
-                          'please join', 'round of interview', 'technical round',
+    interview_keywords = ['schedule an interview', 'invite you for', 'invite you to', 
+                          'interview scheduled', 'interview invitation', 'please join', 
+                          'round of interview', 'technical round', 'technical interview',
                           'assessment link', 'coding challenge', 'interview on',
                           'meeting invite', 'would like to discuss your application']
 
