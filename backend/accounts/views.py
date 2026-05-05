@@ -82,28 +82,40 @@ class CustomTokenObtainPairView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist"}, status=404)
 
-        # 4. DECISION: Direct Login or OTP?
+        # 4. DECISION: Validate Password and Send OTP
         if password:
-            # --- DIRECT LOGIN ---
             user_auth = authenticate(username=email, password=password)
             if user_auth:
-                from rest_framework_simplejwt.tokens import RefreshToken
-                refresh = RefreshToken.for_user(user_auth)
+                # Password is correct -> Generate and send OTP
+                otp = str(random.randint(100000, 999999))
+                try:
+                    OTP.objects.filter(email=email).delete()
+                    OTP.objects.create(email=email, otp=otp)
+                except Exception as e:
+                    return Response({"error": f"Database Error: {str(e)}"}, status=500)
+                
+                print(f"!!! OTP FOR {email} IS: {otp} !!!", flush=True)
+                
+                try:
+                    send_email_via_brevo(
+                        to_email=email,
+                        subject="Your Login Code",
+                        body=f"Your verification code is: {otp}"
+                    )
+                    mail_status = "SENT"
+                except:
+                    mail_status = "FAILED"
+                    
                 return Response({
-                    "access": str(refresh.access_token),
-                    "token": str(refresh.access_token),
-                    "message": "LOGIN_SUCCESS",
-                    "email": user_auth.email,
-                    "user": {
-                        "id": user_auth.id,
-                        "email": user_auth.email,
-                        "name": user_auth.get_full_name() or user_auth.username
-                    }
+                    "message": "OTP_SENT",
+                    "email": email,
+                    "otp_for_debug": otp,
+                    "mail_status": mail_status
                 }, status=200)
             else:
                 return Response({"error": "Invalid password"}, status=401)
         else:
-            # --- OTP LOGIN (Step 1) ---
+            # --- OTP LOGIN (Step 1 without password) ---
             otp = str(random.randint(100000, 999999))
             try:
                 OTP.objects.filter(email=email).delete()
