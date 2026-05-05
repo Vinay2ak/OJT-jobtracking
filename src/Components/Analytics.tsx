@@ -29,12 +29,17 @@ export function Analytics() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        // Fetch directly without waiting for user ID. The apiClient already has your auth token.
-        const response = await apiClient.get('/applications/');
+        setLoading(true);
+        // FIX: Call the actual method that exists in your api.ts!
+        const data = await apiClient.getApplications();
         
-        // Ensure we always have an array, even if the API wraps it in a 'results' object
-        const data = response.data;
+        // Ensure we always have an array
         const jobs: JobData[] = Array.isArray(data) ? data : (data?.results || []);
+
+        if (jobs.length === 0) {
+          setLoading(false);
+          return;
+        }
 
         // 1. Calculate Status Distribution
         const statusCounts = jobs.reduce((acc: Record<string, number>, job) => {
@@ -98,7 +103,6 @@ export function Analytics() {
       } catch (err) {
         console.error("Failed to load analytics:", err);
       } finally {
-        // This guarantees the loading screen goes away no matter what
         setLoading(false); 
       }
     };
