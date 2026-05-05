@@ -1,19 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { apiClient } from '../services/api'; // Corrected import for your project
+import { apiClient } from '../services/api';
+import { useAuth } from '../contexts/AuthContext'; // Required to get the user ID!
 
-// This tells TypeScript exactly what to expect so Vercel doesn't crash!
 interface JobData {
   status?: string;
   applied_date?: string;
+  appliedDate?: string;
   created_at?: string;
 }
 
 export function Analytics() {
+  const { user } = useAuth(); // Grab the logged-in user
   const [loading, setLoading] = useState(true);
 
-  // Dynamic Data States with strict typing
+  // Dynamic Data States
   const [statusData, setStatusData] = useState<{id: string, name: string, value: number}[]>([]);
   const [monthlyData, setMonthlyData] = useState<{id: string, month: string, applications: number}[]>([]);
   const [responseRateData, setResponseRateData] = useState<{id: string, name: string, responses: number}[]>([]);
@@ -27,15 +29,20 @@ export function Analytics() {
   const COLORS = ['#10b981', '#059669', '#34d399', '#f59e0b', '#ef4444'];
 
   useEffect(() => {
+    // If the user isn't loaded yet, wait for them
+    if (!user?.id) return;
+
     const fetchAnalytics = async () => {
       try {
-        // Use apiClient instead of api
-        const response = await apiClient.get('/applications/');
-        const jobs: JobData[] = response.data;
+        setLoading(true);
+        // Use the exact same fetch method that the Applications page uses
+        const data = await apiClient.getApplications(user.id);
+        const jobs: JobData[] = Array.isArray(data) ? data : [];
 
         // 1. Calculate Status Distribution
         const statusCounts = jobs.reduce((acc: Record<string, number>, job) => {
-          const status = job.status || 'applied';
+          // Normalize to lowercase so 'Applied' and 'applied' are counted together
+          const status = (job.status || 'applied').toLowerCase();
           acc[status] = (acc[status] || 0) + 1;
           return acc;
         }, {});
@@ -49,9 +56,9 @@ export function Analytics() {
 
         // 2. Calculate Conversion Funnel & Rates
         const total = jobs.length;
-        const responses = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer', 'rejected'].includes(j.status || '')).length;
-        const interviews = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer'].includes(j.status || '')).length;
-        const offers = jobs.filter(j => ['offered', 'offer', 'accepted'].includes(j.status || '')).length;
+        const responses = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer', 'rejected'].includes((j.status || '').toLowerCase())).length;
+        const interviews = jobs.filter(j => ['interviewing', 'interview', 'offered', 'offer'].includes((j.status || '').toLowerCase())).length;
+        const offers = jobs.filter(j => ['offered', 'offer', 'accepted'].includes((j.status || '').toLowerCase())).length;
 
         setResponseRateData([
           { id: 'rate-response', name: 'Responses', responses: responses },
@@ -69,7 +76,8 @@ export function Analytics() {
         // 3. Calculate Monthly Applications (Last 6 Months)
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthlyCounts = jobs.reduce((acc: Record<string, number>, job) => {
-          const dateStr = job.applied_date || job.created_at;
+          // Support both frontend camelCase and backend snake_case dates
+          const dateStr = job.appliedDate || job.applied_date || job.created_at;
           if (dateStr) {
             const date = new Date(dateStr);
             const month = months[date.getMonth()];
@@ -100,7 +108,7 @@ export function Analytics() {
     };
 
     fetchAnalytics();
-  }, []);
+  }, [user]); // Re-run this automatically when the user logs in!
 
   if (loading) {
     return <div className="p-6 text-center text-gray-500 animate-pulse">Loading analytics...</div>;
