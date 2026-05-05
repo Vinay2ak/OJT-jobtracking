@@ -134,12 +134,11 @@ def keyword_fallback(subject, body, company_name=''):
     if company_lower and company_lower not in text:
         return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
 
-    # Skip common non-status emails
+    # Skip common non-status emails (we will apply this AFTER checking for strong offer/interview signals)
     skip_phrases = ['thank you for applying', 'application received', 'we received your',
                     'job alert', 'new jobs', 'similar jobs', 'recommended for you',
                     'unsubscribe', 'email preferences', 'newsletter']
-    if any(phrase in text for phrase in skip_phrases):
-        return {"classification": "none", "meeting_link": "", "interview_date": "", "confidence": 0.0}
+    has_skip_phrase = any(phrase in text for phrase in skip_phrases)
 
     # Extract meeting links
     meeting_link = ""
