@@ -1,5 +1,5 @@
 asgiref==3.8.1
-Automat==25.4.16
+Automat==24.8.1
 cffi==1.17.1
 certifi==2024.8.30
 channels==4.1.0
@@ -45,7 +45,7 @@ tzdata==2024.2
 ujson==5.10.0
 uritemplate==4.1.1
 urllib3==2.2.3
-zope.interface==7.0.3
+zope.interface==6.4.1
 dj-database-url==2.2.0
 whitenoise==6.7.0
 apscheduler==3.11.2
