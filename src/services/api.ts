@@ -4,13 +4,11 @@ const getHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
-    "Accept": "application/json", // Ensures we always get JSON from the server
+    "Accept": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 export const apiClient = {
-  // --- AUTH FUNCTIONS ---
-  // Updated for DIRECT LOGIN (No OTP needed)
   async login(credentials: any) {
     const response = await fetch(`${API_BASE_URL}/api/token/`, {
       method: "POST",
@@ -30,15 +28,11 @@ export const apiClient = {
       }
     }
     const data = await response.json();
-    
-    // SAVE THE TOKEN IMMEDIATELY (Bypasses OTP)
     if (data.access || data.token) {
       localStorage.setItem("token", data.access || data.token);
     }
-    
     return data; 
   },
-  // Keep this for compatibility, but login will now happen in Step 1
   async verifyOtp(email: string, otp: string) {
     const response = await fetch(`${API_BASE_URL}/api/accounts/verify-otp/`, {
       method: "POST",
@@ -66,7 +60,6 @@ export const apiClient = {
     }
     return response.json();
   },
-  // --- EXISTING FUNCTIONS (REMAINING UNCHANGED) ---
   async getApplications() {
     const response = await fetch(`${API_BASE_URL}/api/applications/`, { headers: getHeaders() });
     if (!response.ok) return [];
@@ -171,6 +164,19 @@ export const apiClient = {
       return response.ok;
     } catch(e) {
       return false;
+    }
+  },
+
+  async scanGmail() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/accounts/gmail/scan/`, {
+        method: "POST",
+        headers: getHeaders()
+      });
+      if (!response.ok) return { message: "Scan failed", updates: [] };
+      return await response.json();
+    } catch(e) {
+      return { message: "Scan failed", updates: [] };
     }
   }
 };
